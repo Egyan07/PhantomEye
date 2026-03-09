@@ -1,0 +1,20 @@
+# Database — may contain real alert history from your network
+*.db
+
+# Logs
+*.log
+
+# Downloaded threat feeds — regenerated on first run
+feeds/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+Desktop.ini
