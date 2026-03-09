@@ -9,7 +9,15 @@ Automatically checks your network activity against 8 live threat feeds — malwa
 
 ## Screenshots
 
-![PhantomEye Dashboard](https://raw.githubusercontent.com/Egyan07/PhantomEye/main/screenshots/Dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/Egyan07/PhantomEye/main/screenshots/Dashboard.png)
+
+![IP Domain Lookup](https://raw.githubusercontent.com/Egyan07/PhantomEye/main/screenshots/IP-Domain%20Lookup.png)
+
+![Email Header Analyser](https://raw.githubusercontent.com/Egyan07/PhantomEye/main/screenshots/Email%20Header%20Analyzer.png)
+
+![DNS Cache Scan](https://raw.githubusercontent.com/Egyan07/PhantomEye/main/screenshots/DNS%20Cache.png)
+
+![Alert History](https://raw.githubusercontent.com/Egyan07/PhantomEye/main/screenshots/Alert%20History.png)
 
 ---
 
