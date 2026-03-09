@@ -9,7 +9,7 @@ Automatically checks your network activity against 8 live threat feeds — malwa
 
 ## Screenshots
 
-![PhantomEye Dashboard](https://raw.githubusercontent.com/YOUR_USERNAME/PhantomEye/main/screenshots/Dashboard.png)
+![PhantomEye Dashboard](https://raw.githubusercontent.com/Egyan07/PhantomEye/main/screenshots/Dashboard.png)
 
 ---
 
