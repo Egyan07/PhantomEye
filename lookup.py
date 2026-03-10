@@ -1,25 +1,22 @@
 # =============================================================================
-#   lookup.py — PhantomEye v1.1
+#   lookup.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   IOC lookup engine.
 #
-#   BUG FIX: All lookups now use the in-memory IOC set from feeds.py
-#   instead of opening a new SQLite connection per query.  This makes
-#   lookups O(1) and removes the performance cliff when scanning thousands
-#   of IPs from a firewall log.
-#
-#   A DB connection is still opened only when full match metadata (threat
-#   type, source feed, timestamps) is needed for display — i.e., once per
-#   user-initiated lookup, not once per scanned IOC.
+#   FIXES v1.2:
+#   - total_iocs and feeds_last_updated now come from the in-memory
+#     _meta_cache in feeds.py — zero extra DB connections per lookup.
+#   - Empty-value input now returns an explicit error dict instead of a
+#     misleading "Clean" result.
+#   - lookup_ioc() exception on DB metadata fetch is now logged at DEBUG.
 # =============================================================================
 
 import sqlite3
-from datetime import datetime
 
 from config import DB_PATH
 from utils import is_valid_ip, is_whitelisted
-from feeds import get_ioc_cache, feeds_loaded
+from feeds import get_ioc_cache, feeds_loaded, get_last_feed_time
 
 
 def is_ioc_known(value: str, ioc_type: str) -> bool:
@@ -36,7 +33,7 @@ def is_ioc_known(value: str, ioc_type: str) -> bool:
         return True
 
     # For domains: walk up subdomain hierarchy
-    # e.g. m.evil.ru → check evil.ru → check ru (skip single-label)
+    # e.g. m.evil.ru → check evil.ru (skip bare TLD)
     if ioc_type == "domain":
         parts = value.split(".")
         for i in range(1, len(parts) - 1):
@@ -50,36 +47,44 @@ def is_ioc_known(value: str, ioc_type: str) -> bool:
 def lookup_ioc(value: str, ioc_type: str = None) -> dict:
     """
     Full lookup: returns a result dict with match metadata.
-    Uses the in-memory cache for the hit/miss check, then fetches metadata
-    from the DB only on a confirmed hit.
+
+    FIX: empty value returns error dict immediately.
+    FIX: total_iocs / feeds_last_updated come from meta cache (no DB).
 
     Returns:
         {
-            found (bool),
-            value (str),
-            type  (str),
-            matches (list[dict]),
-            total_iocs (int),
-            feeds_last_updated (str),
-            zero_feeds_warning (bool),
+            found               (bool),
+            value               (str),
+            type                (str),
+            matches             (list[dict]),
+            total_iocs          (int),
+            feeds_last_updated  (str),
+            zero_feeds_warning  (bool),
+            error               (str | None),
         }
     """
     value = value.strip().lower()
-    # Auto-strip full URLs to hostname if user pastes a full URL
+
+    # Auto-strip full URLs to hostname
     if value.startswith("http"):
         from utils import extract_domain_from_url
         extracted = extract_domain_from_url(value)
-        if extracted:
-            value = extracted
-        else:
-            # Couldn't parse — just strip the scheme and hope for the best
-            value = value.replace("https://", "").replace("http://", "").split("/")[0]
+        value = extracted if extracted else (
+            value.replace("https://", "").replace("http://", "").split("/")[0]
+        )
+
+    # FIX: reject empty input explicitly
+    if not value:
+        return {
+            "found": False, "value": "", "type": "unknown",
+            "matches": [], "total_iocs": feeds_loaded(),
+            "feeds_last_updated": get_last_feed_time(),
+            "zero_feeds_warning": feeds_loaded() == 0,
+            "error": "Empty query — please enter an IP address or domain.",
+        }
 
     if ioc_type is None:
-        if not value:
-            ioc_type = "domain"
-        else:
-            ioc_type = "ip" if is_valid_ip(value) else "domain"
+        ioc_type = "ip" if is_valid_ip(value) else "domain"
 
     total_iocs = feeds_loaded()
     result = {
@@ -88,22 +93,21 @@ def lookup_ioc(value: str, ioc_type: str = None) -> dict:
         "type":               ioc_type,
         "matches":            [],
         "total_iocs":         total_iocs,
-        "feeds_last_updated": _get_last_feed_time(),
+        "feeds_last_updated": get_last_feed_time(),
         "zero_feeds_warning": total_iocs == 0,
+        "error":              None,
     }
 
-    hit = is_ioc_known(value, ioc_type)
-    if not hit:
+    if not is_ioc_known(value, ioc_type):
         return result
 
     result["found"] = True
 
-    # Fetch metadata from DB for display (one query on confirmed hit)
+    # Fetch metadata from DB only on a confirmed hit (one query)
     try:
         conn = sqlite3.connect(DB_PATH)
         cur  = conn.cursor()
 
-        # Direct match
         cur.execute("""
             SELECT type, value, threat_type, source, first_added, last_updated
             FROM iocs WHERE value = ? AND type = ?
@@ -137,8 +141,9 @@ def lookup_ioc(value: str, ioc_type: str = None) -> dict:
                     break
 
         conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        from logger import log
+        log.debug("Could not fetch IOC metadata for %s: %s", value, e)
 
     return result
 
@@ -149,6 +154,12 @@ def format_lookup_result(result: dict) -> str:
     lines.append("=" * 55)
     lines.append("  PhantomEye Lookup Result")
     lines.append("=" * 55)
+
+    if result.get("error"):
+        lines.append(f"  ERROR: {result['error']}")
+        lines.append("=" * 55)
+        return "\n".join(lines)
+
     lines.append(f"  Query     : {result['value']}")
     lines.append(f"  Type      : {result['type'].upper()}")
     lines.append(f"  DB Size   : {result.get('total_iocs', 0):,} IOCs")
@@ -156,14 +167,14 @@ def format_lookup_result(result: dict) -> str:
 
     if result.get("zero_feeds_warning"):
         lines.append("")
-        lines.append("  ⚠ WARNING: No feeds loaded yet.")
+        lines.append("  WARNING: No feeds loaded yet.")
         lines.append("  All results will show Clean until feeds are updated.")
         lines.append("  Click 'Update Feeds' in the Dashboard first.")
 
     lines.append("-" * 55)
 
     if result["found"]:
-        lines.append("  VERDICT   : ⛔ MALICIOUS — FOUND IN THREAT DATABASE")
+        lines.append("  VERDICT   : MALICIOUS — FOUND IN THREAT DATABASE")
         lines.append("")
         for i, match in enumerate(result["matches"], 1):
             lines.append(f"  Match #{i}:")
@@ -177,23 +188,11 @@ def format_lookup_result(result: dict) -> str:
         lines.append("  ACTION: Block immediately if this is an active connection.")
     else:
         if is_whitelisted(result["value"], result["type"]):
-            lines.append("  VERDICT   : ✓ WHITELISTED — Known safe")
+            lines.append("  VERDICT   : WHITELISTED — Known safe")
         else:
-            lines.append("  VERDICT   : ✓ CLEAN — Not found in any threat feed")
+            lines.append("  VERDICT   : CLEAN — Not found in any threat feed")
             lines.append("  Note: Absence from feeds does not guarantee safety.")
             lines.append("  New/unknown threats may not yet appear in feeds.")
 
     lines.append("=" * 55)
     return "\n".join(lines)
-
-
-def _get_last_feed_time() -> str:
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cur  = conn.cursor()
-        cur.execute("SELECT MAX(last_updated) FROM feed_status WHERE status='OK'")
-        val = cur.fetchone()[0]
-        conn.close()
-        return val or "Never"
-    except Exception:
-        return "Unknown"

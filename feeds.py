@@ -1,9 +1,18 @@
 # =============================================================================
-#   feeds.py — PhantomEye v1.1
+#   feeds.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Threat feed download, parsing, and IOC database ingestion.
-#   Also manages the in-memory IOC set used for fast O(1) lookups.
+#   Also manages the in-memory IOC set and metadata cache.
+#
+#   FIXES v1.2:
+#   - Removed redundant double-whitelist check in parse_feed (was called
+#     twice for url_extract and plain_domain formats).
+#   - parse_feed now builds a set directly instead of list→set conversion.
+#   - _meta_cache added so lookup.py never needs a DB round-trip for
+#     total_iocs / last_updated — those values are populated once here
+#     at cache-load time and refreshed after every feed update.
+#   - Bare except: pass replaced with logged warnings throughout.
 # =============================================================================
 
 import os
@@ -23,27 +32,34 @@ from utils import (
 
 # ---------------------------------------------------------------------------
 #   In-memory IOC sets — loaded once at startup, refreshed after feed update
-#   Structure: {"ip": set(), "domain": set()}
-#   Enables O(1) lookup instead of a DB round-trip per IOC checked.
 # ---------------------------------------------------------------------------
 _ioc_cache: dict[str, set] = {"ip": set(), "domain": set()}
+_meta_cache: dict = {"total_iocs": 0, "last_updated": "Never"}
 
 
 def load_ioc_cache() -> dict[str, set]:
     """
     Load all IOCs from the database into memory.
+    Also populates _meta_cache so lookups never need extra DB round-trips.
     Call this once at startup and after every feed update.
-    Returns the populated cache dict.
     """
-    global _ioc_cache
+    global _ioc_cache, _meta_cache
     _ioc_cache = {"ip": set(), "domain": set()}
     try:
         conn = sqlite3.connect(DB_PATH)
         cur  = conn.cursor()
+
         cur.execute("SELECT type, value FROM iocs")
         for ioc_type, value in cur.fetchall():
             if ioc_type in _ioc_cache:
                 _ioc_cache[ioc_type].add(value.lower())
+
+        cur.execute("SELECT MAX(last_updated) FROM feed_status WHERE status='OK'")
+        row = cur.fetchone()
+        _meta_cache["last_updated"] = row[0] if row and row[0] else "Never"
+        _meta_cache["total_iocs"]   = (
+            len(_ioc_cache["ip"]) + len(_ioc_cache["domain"])
+        )
         conn.close()
         log.info(
             "IOC cache loaded: %d IPs, %d domains",
@@ -59,17 +75,19 @@ def get_ioc_cache() -> dict[str, set]:
     return _ioc_cache
 
 
+def get_meta_cache() -> dict:
+    """Return cached metadata: total_iocs, last_updated."""
+    return _meta_cache
+
+
 def feeds_loaded() -> int:
-    """Return total number of IOCs currently in the database (0 = feeds never run)."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cur  = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM iocs")
-        count = cur.fetchone()[0]
-        conn.close()
-        return count
-    except Exception:
-        return 0
+    """Return total IOC count from the meta cache (no DB I/O)."""
+    return _meta_cache["total_iocs"]
+
+
+def get_last_feed_time() -> str:
+    """Return last successful feed update time from the meta cache (no DB I/O)."""
+    return _meta_cache["last_updated"]
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +102,7 @@ def download_feed(feed_name: str, feed_config: dict) -> str | None:
     url      = feed_config["url"]
     filepath = os.path.join(FEEDS_DIR, f"{feed_name}.txt")
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "PhantomEye/1.1"})
+        req = urllib.request.Request(url, headers={"User-Agent": "PhantomEye/1.2"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
         with open(filepath, "w", encoding="utf-8") as f:
@@ -94,8 +112,11 @@ def download_feed(feed_name: str, feed_config: dict) -> str | None:
         log.warning("Feed download failed [%s]: %s", feed_name, e)
         if os.path.exists(filepath):
             log.info("Using cached feed for: %s", feed_name)
-            with open(filepath, "r", encoding="utf-8") as f:
-                return f.read()
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    return f.read()
+            except OSError as read_err:
+                log.error("Could not read cached feed [%s]: %s", feed_name, read_err)
         return None
 
 
@@ -103,7 +124,6 @@ def download_feed(feed_name: str, feed_config: dict) -> str | None:
 #   Parsing
 # ---------------------------------------------------------------------------
 
-# Maps feed names to a human-readable threat category
 _THREAT_MAP = {
     "feodo_ips":        "c2",
     "emerging_threats": "compromised",
@@ -123,15 +143,14 @@ def parse_feed(content: str, feed_name: str, feed_config: dict) -> list[str]:
     Supported formats: plain_ip, feodo_csv, abuse_ssl_csv,
                        url_extract, plain_domain.
 
-    BUG FIX: feodo_csv and abuse_ssl_csv now validate against column
-    headers when present so format changes don't silently skip everything.
+    FIX: Builds a set directly (no list→set round-trip).
+    FIX: Single whitelist check at the end — removed redundant inline checks.
     """
-    iocs     = []
+    iocs:     set[str] = set()
     fmt      = feed_config["format"]
     ioc_type = feed_config["type"]
     lines    = content.splitlines()
 
-    # For CSV feeds: detect column index from header row dynamically
     ip_col_index = _detect_ip_column(lines, fmt)
 
     for line in lines:
@@ -155,32 +174,31 @@ def parse_feed(content: str, feed_name: str, feed_config: dict) -> list[str]:
 
         elif fmt == "url_extract":
             domain = extract_domain_from_url(line)
-            if domain and is_valid_domain(domain) and not is_whitelisted(domain, "domain"):
+            if domain and is_valid_domain(domain):
                 value = domain
 
         elif fmt == "plain_domain":
             candidate = line.split()[0].lower().strip(".")
-            if is_valid_domain(candidate) and not is_whitelisted(candidate, "domain"):
+            if is_valid_domain(candidate):
                 value = candidate
 
+        # Single whitelist check for all formats
         if value and not is_whitelisted(value, ioc_type):
-            iocs.append(value.lower())
+            iocs.add(value.lower())
 
-    return list(set(iocs))
+    return list(iocs)
 
 
 def _detect_ip_column(lines: list[str], fmt: str) -> int:
     """
     Find the column index that contains the IP in a CSV feed by inspecting
-    the header row. Falls back to the v1.0 hardcoded defaults if no header
-    is found, so existing known-good feeds continue to work.
+    the header row. Falls back to hardcoded defaults if no header is found.
     """
     defaults = {"feodo_csv": 1, "abuse_ssl_csv": 1}
     for line in lines[:5]:
         line = line.strip()
         if not line or not line.startswith("#"):
             continue
-        # Header lines look like "# first_seen_utc,dst_ip,dst_port,..."
         header = line.lstrip("# ").lower()
         cols   = [c.strip() for c in header.split(",")]
         for i, col in enumerate(cols):
@@ -196,13 +214,13 @@ def _detect_ip_column(lines: list[str], fmt: str) -> int:
 def update_feeds(callback=None) -> int:
     """
     Download all threat feeds, parse them, and upsert IOCs into the database.
-    Reloads the in-memory IOC cache when done.
+    Reloads the in-memory IOC cache and meta cache when done.
 
     callback: optional callable(str) for GUI progress messages.
     Returns total IOC count in database after update.
     """
     log.info("=" * 60)
-    log.info("PhantomEye v1.1 — Updating threat feeds")
+    log.info("PhantomEye v1.2 — Updating threat feeds")
     log.info("=" * 60)
 
     conn      = sqlite3.connect(DB_PATH)
@@ -224,8 +242,10 @@ def update_feeds(callback=None) -> int:
                 VALUES (?, ?, ?, 0, 'FAILED')
             """, (feed_name, label, now))
             conn.commit()
+            msg = f"  {label}: FAILED (no cache available)"
+            log.warning(msg)
             if callback:
-                callback(f"  {label}: FAILED (no cache available)")
+                callback(msg)
             continue
 
         iocs        = parse_feed(content, feed_name, feed_config)
@@ -242,15 +262,13 @@ def update_feeds(callback=None) -> int:
                 """, (ioc_type, ioc_value, threat_type, feed_name, now, now))
                 if cur.rowcount > 0:
                     added += 1
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("IOC insert failed [%s / %s]: %s", feed_name, ioc_value, e)
 
-        # Update last_updated on already-known records from this feed
         cur.execute(
             "UPDATE iocs SET last_updated=? WHERE source=?",
             (now, feed_name)
         )
-
         cur.execute("""
             INSERT OR REPLACE INTO feed_status
                 (feed_name, label, last_updated, ioc_count, status)
@@ -267,7 +285,7 @@ def update_feeds(callback=None) -> int:
     total = cur.fetchone()[0]
     conn.close()
 
-    # Rebuild in-memory cache after update
+    # Rebuild both caches after update
     load_ioc_cache()
 
     summary = (
@@ -278,3 +296,25 @@ def update_feeds(callback=None) -> int:
     if callback:
         callback(summary)
     return total
+
+
+def check_stale_feeds() -> list[str]:
+    """
+    Return a list of feed names that have FAILED status or have never run.
+    Used by --check CLI mode and the dashboard health indicator.
+    """
+    stale = []
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur  = conn.cursor()
+        for feed_name in THREAT_FEEDS:
+            cur.execute(
+                "SELECT status FROM feed_status WHERE feed_name=?", (feed_name,)
+            )
+            row = cur.fetchone()
+            if row is None or row[0] != "OK":
+                stale.append(feed_name)
+        conn.close()
+    except Exception as e:
+        log.warning("Could not check feed health: %s", e)
+    return stale

@@ -1,5 +1,5 @@
 # =============================================================================
-#   scanner.py — PhantomEye v1.1
+#   scanner.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Three scan engines:
@@ -7,15 +7,13 @@
 #     scan_dns_cache()        — Windows DNS resolver cache via PowerShell
 #     analyse_email_headers() — Raw email header IOC extraction
 #
-#   BUG FIXES:
-#   - Firewall scanner now alerts on both ALLOW *and* DROP entries.
-#     A blocked connection to a C2 server is reported as CRITICAL (infection
-#     indicator); an allowed connection is reported as CRITICAL (active C2).
-#   - All scan loops share one SQLite connection passed into record_alert()
-#     instead of opening a new connection per alert.
-#   - Variable shadowing in scan_dns_cache fixed (subprocess result
-#     renamed to proc_result).
-#   - IPv6 addresses are validated and checked (was silently skipped).
+#   FIXES v1.2:
+#   - scan_firewall_logs now also checks src_ip (inbound from malicious IP).
+#   - analyse_email_headers: IP extraction no longer triggered by any "[" in
+#     a line — now restricted to Received: headers only, eliminating false
+#     positives from Message-ID, Content-Type, etc.
+#   - Bare except: pass replaced with logged warnings.
+#   - Domain deduplication cap ([:20]) raised to 50 for better coverage.
 # =============================================================================
 
 import re
@@ -36,14 +34,12 @@ from alerts import record_alert
 
 def scan_firewall_logs(callback=None) -> list[dict]:
     """
-    Parse Windows Firewall log and check all destination IPs (both ALLOW
-    and DROP entries) against the threat intelligence database.
+    Parse Windows Firewall log and check destination AND source IPs against
+    the threat intelligence database.
 
-    BUG FIX: v1.0 only checked ALLOW entries. A DROP to a C2 server is
-    arguably more important — it means a machine is infected and actively
-    trying to phone home, but was caught by the firewall.
-
-    Returns list of hit dicts.
+    - ALLOW + malicious dst_ip → active outbound C2 connection (CRITICAL)
+    - DROP  + malicious dst_ip → infection attempt caught by firewall (CRITICAL)
+    - ALLOW/DROP + malicious src_ip → inbound scan/attack from known bad actor (HIGH)
     """
     import os
     log.info("Scanning Windows Firewall logs...")
@@ -51,8 +47,8 @@ def scan_firewall_logs(callback=None) -> list[dict]:
     if not os.path.exists(FIREWALL_LOG):
         msg = (
             f"Firewall log not found: {FIREWALL_LOG}\n"
-            f"Enable logging: Windows Defender Firewall → Advanced Settings "
-            f"→ Properties → each Profile → Logging"
+            "Enable logging: Windows Defender Firewall → Advanced Settings "
+            "→ Properties → each Profile → Logging"
         )
         log.warning(msg)
         if callback:
@@ -61,7 +57,7 @@ def scan_firewall_logs(callback=None) -> list[dict]:
 
     hits    = []
     cutoff  = datetime.now() - timedelta(days=FIREWALL_LOG_DAYS)
-    checked = set()   # Avoid re-checking the same IP twice per run
+    checked = set()
 
     conn = sqlite3.connect(DB_PATH)
     try:
@@ -86,75 +82,96 @@ def scan_firewall_logs(callback=None) -> list[dict]:
                     continue
 
                 action = parts[2].upper() if len(parts) > 2 else ""
+                src_ip = parts[4]          if len(parts) > 4 else ""
                 dst_ip = parts[5]          if len(parts) > 5 else ""
 
-                # BUG FIX: check both ALLOW and DROP
                 if action not in ("ALLOW", "DROP"):
                     continue
-                if not is_valid_ip(dst_ip):
-                    continue
-                if is_private_ip(dst_ip):
-                    continue
-                if dst_ip in checked:
-                    continue
 
-                checked.add(dst_ip)
+                # --- Check destination IP (outbound / egress) ---
+                if is_valid_ip(dst_ip) and not is_private_ip(dst_ip):
+                    key = ("dst", dst_ip)
+                    if key not in checked:
+                        checked.add(key)
+                        if is_ioc_known(dst_ip, "ip"):
+                            if action == "DROP":
+                                sev    = "CRITICAL"
+                                a_type = "MALICIOUS IP — BLOCKED BY FIREWALL (infection indicator)"
+                                detail = (
+                                    "A machine on this network attempted to connect to a known "
+                                    "malicious IP and was blocked by the firewall. This strongly "
+                                    "indicates an infected machine."
+                                )
+                            else:
+                                sev    = "CRITICAL"
+                                a_type = "MALICIOUS IP IN FIREWALL LOG — ACTIVE OUTBOUND CONNECTION"
+                                detail = (
+                                    "An outbound connection to a known malicious IP was allowed "
+                                    "through the firewall. Investigate immediately."
+                                )
+                            context  = f"Firewall log — dst — action={action} at {parts[0]} {parts[1]}"
+                            recorded = record_alert(
+                                severity=sev, alert_type=a_type,
+                                ioc_value=dst_ip, ioc_type="ip",
+                                source_feed="firewall_scan", context=context,
+                                details=detail, conn=conn,
+                            )
+                            conn.commit()
+                            hit = {"ioc": dst_ip, "type": "ip", "direction": "outbound",
+                                   "action": action, "context": context}
+                            hits.append(hit)
+                            msg = f"[HIT] {dst_ip} (dst) — {action} — {'(new alert)' if recorded else '(dedupe)'}"
+                            log.warning(msg)
+                            if callback:
+                                callback(msg)
 
-                if not is_ioc_known(dst_ip, "ip"):
-                    continue
-
-                # Differentiate: DROP = infection attempt caught; ALLOW = active connection
-                if action == "DROP":
-                    sev     = "CRITICAL"
-                    a_type  = "MALICIOUS IP — BLOCKED BY FIREWALL (infection indicator)"
-                    detail  = (
-                        "A machine on this network attempted to connect to a known malicious IP "
-                        "and was blocked by the firewall. This strongly indicates an infected machine."
-                    )
-                else:
-                    sev     = "CRITICAL"
-                    a_type  = "MALICIOUS IP IN FIREWALL LOG — ACTIVE CONNECTION"
-                    detail  = (
-                        "An outbound connection to a known malicious IP was allowed through "
-                        "the firewall. Investigate immediately."
-                    )
-
-                context = f"Firewall log — action={action} at {parts[0]} {parts[1]}"
-                recorded = record_alert(
-                    severity=sev, alert_type=a_type,
-                    ioc_value=dst_ip, ioc_type="ip",
-                    source_feed="firewall_scan", context=context,
-                    details=detail, conn=conn,
-                )
-                conn.commit()
-
-                hit = {
-                    "ioc":     dst_ip,
-                    "type":    "ip",
-                    "action":  action,
-                    "context": context,
-                }
-                hits.append(hit)
-                msg = f"[HIT] {dst_ip} — {action} — {'(new alert)' if recorded else '(dedupe)'}"
-                log.warning(msg)
-                if callback:
-                    callback(msg)
+                # --- Check source IP (inbound / ingress) ---
+                if is_valid_ip(src_ip) and not is_private_ip(src_ip):
+                    key = ("src", src_ip)
+                    if key not in checked:
+                        checked.add(key)
+                        if is_ioc_known(src_ip, "ip"):
+                            sev    = "HIGH"
+                            a_type = "MALICIOUS IP — INBOUND CONNECTION ATTEMPT"
+                            detail = (
+                                "A connection attempt was received from a known malicious IP. "
+                                f"Action taken by firewall: {action}."
+                            )
+                            context  = f"Firewall log — src — action={action} at {parts[0]} {parts[1]}"
+                            recorded = record_alert(
+                                severity=sev, alert_type=a_type,
+                                ioc_value=src_ip, ioc_type="ip",
+                                source_feed="firewall_scan", context=context,
+                                details=detail, conn=conn,
+                            )
+                            conn.commit()
+                            hit = {"ioc": src_ip, "type": "ip", "direction": "inbound",
+                                   "action": action, "context": context}
+                            hits.append(hit)
+                            msg = f"[HIT] {src_ip} (src) — {action} — {'(new alert)' if recorded else '(dedupe)'}"
+                            log.warning(msg)
+                            if callback:
+                                callback(msg)
 
     except PermissionError:
-        log.error("Cannot read firewall log — run as Administrator")
+        msg = "Cannot read firewall log — run as Administrator"
+        log.error(msg)
         if callback:
-            callback("ERROR: Cannot read firewall log — run as Administrator")
+            callback(f"ERROR: {msg}")
+    except OSError as e:
+        log.error("Error reading firewall log: %s", e)
+        if callback:
+            callback(f"ERROR reading firewall log: {e}")
     finally:
         conn.close()
 
+    unique_ips = len({k[1] for k in checked})
     log.info(
         "Firewall scan complete. %d unique IPs checked, %d malicious hits.",
-        len(checked), len(hits)
+        unique_ips, len(hits)
     )
     if callback:
-        callback(
-            f"Firewall scan: {len(checked)} IPs checked, {len(hits)} malicious hits"
-        )
+        callback(f"Firewall scan: {unique_ips} IPs checked, {len(hits)} malicious hits")
     return hits
 
 
@@ -166,9 +183,6 @@ def scan_dns_cache(callback=None) -> list[dict]:
     """
     Read the Windows DNS resolver cache via PowerShell and check all domains
     against the threat intelligence database.
-
-    BUG FIX: variable shadowing — subprocess result renamed proc_result
-    so it can't be confused with the IOC lookup result dict.
     """
     log.info("Scanning DNS cache...")
     hits = []
@@ -179,10 +193,12 @@ def scan_dns_cache(callback=None) -> list[dict]:
             "Select-Object -ExpandProperty Entry | "
             "Sort-Object -Unique"
         )
-        proc_result = subprocess.run(      # was: result = subprocess.run(...)
+        proc_result = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
             capture_output=True, text=True, timeout=30
         )
+        if proc_result.returncode != 0 and proc_result.stderr:
+            log.warning("PowerShell DNS cache stderr: %s", proc_result.stderr.strip())
         domains = [
             d.strip().lower()
             for d in proc_result.stdout.splitlines()
@@ -225,6 +241,8 @@ def scan_dns_cache(callback=None) -> list[dict]:
             log.warning(msg)
             if callback:
                 callback(msg)
+    except Exception as e:
+        log.error("DNS scan error: %s", e)
     finally:
         conn.close()
 
@@ -246,10 +264,9 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
     Parse raw email headers, extract all sender/relay IPs and domains,
     check each against the threat intelligence feeds.
 
-    Works with headers pasted from Outlook (File → Properties → Internet Headers)
-    or Gmail (Show Original).
-
-    Returns a formatted multi-line report string.
+    FIX: IP extraction now restricted to lines starting with 'Received:'.
+         Previously any line containing '[' was also searched, causing false
+         positives from Message-ID headers and other bracketed fields.
     """
     lines          = header_text.splitlines()
     ip_pattern     = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
@@ -258,7 +275,7 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
     )
 
     # --- Extract From and Reply-To domains ---
-    from_domain = ""
+    from_domain  = ""
     reply_domain = ""
     for line in lines:
         ll = line.lower()
@@ -273,15 +290,15 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
 
     mismatch_alert = bool(from_domain and reply_domain and from_domain != reply_domain)
 
-    # --- Extract IPs from Received headers ---
+    # --- Extract IPs from Received: headers only (FIX: removed "[" in line branch) ---
     received_ips = []
     for line in lines:
-        if line.lower().startswith("received:") or "[" in line:
+        if line.lower().startswith("received:"):
             for ip in ip_pattern.findall(line):
                 if is_valid_ip(ip) and not is_private_ip(ip):
                     received_ips.append(ip)
 
-    # --- Extract domains from Received headers ---
+    # --- Extract domains from Received: headers ---
     received_domains = []
     for line in lines:
         if line.lower().startswith("received:"):
@@ -301,10 +318,10 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
     if reply_domain:
         report.append(f"  Reply-To      : {reply_domain}")
     if mismatch_alert:
-        report.append("  ⚠ WARNING: From ≠ Reply-To — possible phishing redirect!")
+        report.append("  WARNING: From != Reply-To — possible phishing redirect!")
 
-    unique_ips     = list(dict.fromkeys(received_ips))     # dedup, preserve order
-    unique_domains = list(dict.fromkeys(received_domains))[:20]
+    unique_ips     = list(dict.fromkeys(received_ips))
+    unique_domains = list(dict.fromkeys(received_domains))[:50]  # raised from 20 to 50
 
     report.append(f"  IPs found     : {len(unique_ips)}")
     report.append(f"  Domains found : {len(unique_domains)}")
@@ -323,9 +340,9 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
                     conn=conn,
                 )
                 conn.commit()
-                report.append(f"  IP  {ip:<20} ⛔ MALICIOUS")
+                report.append(f"  IP  {ip:<20} MALICIOUS")
             else:
-                report.append(f"  IP  {ip:<20} ✓ Clean")
+                report.append(f"  IP  {ip:<20} Clean")
 
         for domain in unique_domains:
             if is_whitelisted(domain, "domain"):
@@ -339,18 +356,21 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
                     conn=conn,
                 )
                 conn.commit()
-                report.append(f"  DOM {domain:<35} ⛔ MALICIOUS")
+                report.append(f"  DOM {domain:<35} MALICIOUS")
             else:
-                report.append(f"  DOM {domain:<35} ✓ Clean")
+                report.append(f"  DOM {domain:<35} Clean")
+    except Exception as e:
+        log.error("Email header analysis error: %s", e)
+        report.append(f"  ERROR during analysis: {e}")
     finally:
         conn.close()
 
     report.append("-" * 60)
     if threat_count > 0 or mismatch_alert:
-        report.append(f"  VERDICT: ⛔ SUSPICIOUS — {threat_count} threat(s) detected")
+        report.append(f"  VERDICT: SUSPICIOUS — {threat_count} threat(s) detected")
         report.append("  Do NOT click links or open attachments in this email.")
     else:
-        report.append("  VERDICT: ✓ No known threats found in email headers.")
+        report.append("  VERDICT: No known threats found in email headers.")
         report.append("  Note: Clean headers don't guarantee the email is safe.")
     report.append("=" * 60)
 

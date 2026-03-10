@@ -1,0 +1,14 @@
+# PhantomEye v1.2 — Red Parrot Accounting Ltd
+#
+# This project uses only Python standard library modules.
+# Python 3.10 or newer is required.
+#
+# No third-party packages are needed to run PhantomEye.
+#
+# To run the test suite:
+#   pip install pytest pytest-cov
+#   pytest tests/ --cov=. --cov-report=term-missing
+
+# Dev / test dependencies only
+pytest>=7.0
+pytest-cov>=4.0

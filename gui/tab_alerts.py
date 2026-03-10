@@ -1,8 +1,13 @@
 # =============================================================================
-#   gui/tab_alerts.py — PhantomEye v1.1
+#   gui/tab_alerts.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Alert History tab with export-to-CSV support.
+#
+#   CHANGES v1.2:
+#   - Alert history limit now pulled from config.ALERT_HISTORY_LIMIT
+#     instead of hardcoded 500.
+#   - Bare except: pass replaced with logged error.
 # =============================================================================
 
 import csv
@@ -12,7 +17,7 @@ import tkinter as tk
 from tkinter import messagebox, filedialog, ttk
 from datetime import datetime
 
-from config import DB_PATH
+from config import DB_PATH, ALERT_HISTORY_LIMIT
 from gui.theme import (
     BG, FG, PANEL, ACCENT, ACCENT2, WARN, DANGER, MUTED,
     make_button, apply_treeview_style,
@@ -29,9 +34,9 @@ class AlertsTab:
 
         btn_row = tk.Frame(t, bg=BG)
         btn_row.pack(fill=tk.X, padx=15, pady=8)
-        make_button(btn_row, "🔄 Refresh",        self.refresh,       "#444"  ).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "📥 Export CSV",      self._export_csv,   ACCENT2 ).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "Clear All Alerts",   self._clear_alerts, DANGER  ).pack(side=tk.LEFT)
+        make_button(btn_row, "  Refresh",          self.refresh,       "#444"  ).pack(side=tk.LEFT, padx=(0, 8))
+        make_button(btn_row, "  Export CSV",        self._export_csv,   ACCENT2 ).pack(side=tk.LEFT, padx=(0, 8))
+        make_button(btn_row, "Clear All Alerts",    self._clear_alerts, DANGER  ).pack(side=tk.LEFT)
 
         # --- Treeview ---
         cols   = ("Time", "Severity", "Type", "IOC", "Context")
@@ -66,14 +71,15 @@ class AlertsTab:
             cur  = conn.cursor()
             cur.execute("""
                 SELECT timestamp, severity, alert_type, ioc_value, context
-                FROM alerts ORDER BY id DESC LIMIT 500
-            """)
+                FROM alerts ORDER BY id DESC LIMIT ?
+            """, (ALERT_HISTORY_LIMIT,))
             for row in cur.fetchall():
                 tag = "critical" if row[1] == "CRITICAL" else "warning"
                 self.tree.insert("", tk.END, values=row, tags=(tag,))
             conn.close()
-        except Exception:
-            pass
+        except Exception as e:
+            from logger import log
+            log.warning("Alert history refresh error: %s", e)
 
     def _clear_alerts(self):
         if not messagebox.askyesno("PhantomEye", "Clear all alert history from database?"):

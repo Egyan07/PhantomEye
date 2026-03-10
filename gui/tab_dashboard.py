@@ -1,23 +1,26 @@
 # =============================================================================
-#   gui/tab_dashboard.py — PhantomEye v1.1
+#   gui/tab_dashboard.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Dashboard tab: IOC stats, action buttons, console output.
 #
-#   BUG FIX: _run_update_feeds, _run_firewall_scan, _run_dns_scan all
-#   run in daemon threads (this was already correct in v1.0 — preserved).
+#   FIXES v1.2:
+#   - messagebox.showwarning() moved off background threads via after(0,...).
+#     Calling tkinter GUI functions from daemon threads causes hangs/crashes.
+#   - Feed health warning card added — turns red if any feed has failed.
+#   - Last scan time now tracked and displayed in stats bar.
+#   - Bare except: pass replaced with logged errors.
 # =============================================================================
 
+import os
+import sqlite3
 import threading
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime
 
-import sqlite3
-import os
-
 from config import DB_PATH
-from feeds import update_feeds
+from feeds import update_feeds, check_stale_feeds, get_last_feed_time
 from scanner import scan_firewall_logs, scan_dns_cache
 from gui.theme import (
     BG, FG, PANEL, ACCENT, ACCENT2, WARN, DANGER, MUTED,
@@ -28,6 +31,7 @@ from gui.theme import (
 class DashboardTab:
     def __init__(self, parent: tk.Frame):
         self.parent = parent
+        self._last_scan = "Never"
         self._build()
 
     def _build(self):
@@ -41,15 +45,24 @@ class DashboardTab:
         self.stat_alerts  = self._stat_card(stats_frame, "Alerts Raised", "0",     DANGER)
         self.stat_feeds   = self._stat_card(stats_frame, "Feeds Active",  "0",     ACCENT)
         self.stat_updated = self._stat_card(stats_frame, "Last Updated",  "Never", WARN)
+        self.stat_scan    = self._stat_card(stats_frame, "Last Scan",     "Never", MUTED)
 
         # --- Action buttons ---
         btn_frame = tk.Frame(t, bg=BG)
         btn_frame.pack(fill=tk.X, padx=15, pady=(0, 8))
 
-        make_button(btn_frame, "⬇  Update Feeds",      self._run_update_feeds,  ACCENT2).pack(side=tk.LEFT, padx=4)
-        make_button(btn_frame, "🔍  Scan Firewall Log", self._run_firewall_scan, ACCENT ).pack(side=tk.LEFT, padx=4)
-        make_button(btn_frame, "🌐  Scan DNS Cache",    self._run_dns_scan,      ACCENT ).pack(side=tk.LEFT, padx=4)
-        make_button(btn_frame, "🔄  Refresh",           self.refresh,            "#444" ).pack(side=tk.LEFT, padx=4)
+        make_button(btn_frame, "  Update Feeds",      self._run_update_feeds,  ACCENT2).pack(side=tk.LEFT, padx=4)
+        make_button(btn_frame, "  Scan Firewall Log", self._run_firewall_scan, ACCENT ).pack(side=tk.LEFT, padx=4)
+        make_button(btn_frame, "  Scan DNS Cache",    self._run_dns_scan,      ACCENT ).pack(side=tk.LEFT, padx=4)
+        make_button(btn_frame, "  Refresh",           self.refresh,            "#444" ).pack(side=tk.LEFT, padx=4)
+
+        # --- Feed health warning (hidden until a feed fails) ---
+        self._health_var = tk.StringVar(value="")
+        self._health_lbl = tk.Label(
+            t, textvariable=self._health_var,
+            bg=BG, fg=DANGER, font=("Consolas", 9),
+        )
+        self._health_lbl.pack(anchor="w", padx=15)
 
         # --- Console ---
         tk.Label(t, text="Console Output", bg=BG, fg=MUTED,
@@ -60,9 +73,11 @@ class DashboardTab:
         self.console.tag_config("ok",   foreground=ACCENT)
         self.console.tag_config("info", foreground=MUTED)
 
-        self._write("PhantomEye v1.1 ready.\n"
-                    "Click 'Update Feeds' to download the latest threat intelligence.\n",
-                    "info")
+        self._write(
+            "PhantomEye v1.2 ready.\n"
+            "Click 'Update Feeds' to download the latest threat intelligence.\n",
+            "info"
+        )
 
     # -----------------------------------------------------------------------
     #   Public
@@ -89,8 +104,20 @@ class DashboardTab:
             self.stat_alerts.config(text=str(alert_count))
             self.stat_feeds.config(text=str(feed_count))
             self.stat_updated.config(text=last_upd[:10] if last_upd else "Never")
-        except Exception:
-            pass
+            self.stat_scan.config(text=self._last_scan[:10] if self._last_scan != "Never" else "Never")
+
+            # Feed health check
+            stale = check_stale_feeds()
+            if stale:
+                self._health_var.set(
+                    f"  WARNING: {len(stale)} feed(s) failed — click Update Feeds"
+                )
+            else:
+                self._health_var.set("")
+
+        except Exception as e:
+            from logger import log
+            log.warning("Dashboard refresh error: %s", e)
 
     def write(self, msg: str, tag: str = ""):
         self._write(msg, tag)
@@ -120,13 +147,11 @@ class DashboardTab:
         def task():
             self._write("Starting feed update...", "info")
             try:
-                update_feeds(
-                    callback=lambda m: self._write(m, "info")
-                )
+                update_feeds(callback=lambda m: self._write(m, "info"))
                 self._write("Feed update complete!", "ok")
-                self.refresh()
+                self.parent.after(0, self.refresh)
             except Exception as e:
-                self._write(f"Error: {e}", "hit")
+                self._write(f"Feed update error: {e}", "hit")
         threading.Thread(target=task, daemon=True).start()
 
     def _run_firewall_scan(self):
@@ -137,18 +162,18 @@ class DashboardTab:
                     m, "hit" if "[HIT]" in m else "info"
                 )
             )
+            self._last_scan = datetime.now().strftime("%Y-%m-%d %H:%M")
+            self.parent.after(0, self.refresh)
             if hits:
-                self._write(
-                    f"⛔ {len(hits)} malicious IP(s) found in firewall log!", "hit"
-                )
-                messagebox.showwarning(
+                self._write(f"  {len(hits)} malicious IP(s) found in firewall log!", "hit")
+                # FIX: messagebox must run on the main thread
+                self.parent.after(0, lambda: messagebox.showwarning(
                     "PhantomEye — Threat Detected!",
                     f"{len(hits)} malicious IP connection(s) found.\n"
-                    f"Check the Alert History tab for details."
-                )
+                    "Check the Alert History tab for details."
+                ))
             else:
-                self._write("✓ No malicious IPs found in firewall log.", "ok")
-            self.refresh()
+                self._write("  No malicious IPs found in firewall log.", "ok")
         threading.Thread(target=task, daemon=True).start()
 
     def _run_dns_scan(self):
@@ -159,16 +184,16 @@ class DashboardTab:
                     m, "hit" if "[HIT]" in m else "info"
                 )
             )
+            self._last_scan = datetime.now().strftime("%Y-%m-%d %H:%M")
+            self.parent.after(0, self.refresh)
             if hits:
-                self._write(
-                    f"⛔ {len(hits)} malicious domain(s) in DNS cache!", "hit"
-                )
-                messagebox.showwarning(
+                self._write(f"  {len(hits)} malicious domain(s) in DNS cache!", "hit")
+                # FIX: messagebox must run on the main thread
+                self.parent.after(0, lambda: messagebox.showwarning(
                     "PhantomEye — Threat Detected!",
                     f"{len(hits)} malicious domain(s) found in DNS cache.\n"
-                    f"A machine on your network recently resolved a known malicious domain."
-                )
+                    "A machine on your network recently resolved a known malicious domain."
+                ))
             else:
-                self._write("✓ No malicious domains found in DNS cache.", "ok")
-            self.refresh()
+                self._write("  No malicious domains found in DNS cache.", "ok")
         threading.Thread(target=task, daemon=True).start()
