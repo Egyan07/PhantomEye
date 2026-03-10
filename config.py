@@ -1,5 +1,5 @@
 # =============================================================================
-#   config.py — PhantomEye v1.1
+#   config.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   All user-editable configuration lives here.
@@ -7,6 +7,9 @@
 # =============================================================================
 
 import os
+
+# Tool version (referenced by main.py)
+VERSION = "1.2"
 
 # Admin machine name for msg.exe desktop alerts
 ADMIN_PC = "ADMINPC"
@@ -53,6 +56,9 @@ WHITELIST_DOMAINS = [
 # Alert deduplication window — don't re-alert on the same IOC within this
 # many hours (prevents alert storms from beaconing malware)
 ALERT_DEDUPE_HOURS = 24
+
+# Maximum alerts shown in the Alert History tab
+ALERT_HISTORY_LIMIT = 500
 
 # Storage paths — change only if necessary
 LOG_DIR   = r"C:\SecurityLogs\PhantomEye"
