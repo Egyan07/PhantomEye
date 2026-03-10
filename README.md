@@ -27,6 +27,7 @@ PhantomEye downloads threat intelligence from 8 free public feeds and checks you
 
 It detects:
 - Machines connecting to known **malware / C2 servers** (both allowed and blocked connections)
+- **Inbound connection attempts** from known malicious IPs
 - DNS lookups for known **phishing or malware domains**
 - Malicious IPs or domains in **email headers**
 - Any IP or domain you want to **manually check**
@@ -37,12 +38,13 @@ It detects:
 
 | Feature | Description |
 |---|---|
-| 🔍 IP / Domain Lookup | Instant verdict from 40,000+ IOCs — paste any IP or domain |
+| 🔍 IP / Domain Lookup | Instant verdict from 40,000+ IOCs — paste any IP, domain, or full URL |
 | 📧 Email Header Analyser | Paste raw Outlook headers — extracts and checks all relay IPs and sender domains |
-| 🔥 Firewall Log Scanner | Checks Windows Firewall log against threat feeds — flags both ALLOW and DROP entries |
+| 🔥 Firewall Log Scanner | Checks Windows Firewall log — flags both outbound (dst) and inbound (src) malicious IPs |
 | 🌐 DNS Cache Scanner | Checks your Windows DNS resolver cache for malicious domains |
 | 📊 Alert History | Full timestamped alert log with CSV export |
-| 📡 Feed Status | Per-feed IOC count and last-update timestamp |
+| 📡 Feed Status | Per-feed IOC count, last-update timestamp, and health indicator |
+| 🩺 Health Check | `--check` flag validates config, DB, and feed status from the CLI |
 
 ---
 
@@ -108,6 +110,16 @@ python C:\SecurityLogs\PhantomEye\main.py --lookup 185.234.xx.xx
 python C:\SecurityLogs\PhantomEye\main.py --lookup evil-domain.ru
 ```
 
+**Check version:**
+```
+python C:\SecurityLogs\PhantomEye\main.py --version
+```
+
+**Validate config and feed health:**
+```
+python C:\SecurityLogs\PhantomEye\main.py --check
+```
+
 ---
 
 ## Email Alerts (optional)
@@ -119,6 +131,17 @@ Store your password as a Windows environment variable — **never hardcode it**:
 # Run PowerShell as Administrator
 [System.Environment]::SetEnvironmentVariable(
   'PHANTOMEYE_EMAIL_PASSWORD', 'your_app_password', 'Machine')
+```
+
+---
+
+## Running Tests
+
+PhantomEye ships with 86 unit tests covering utils, feeds, lookup, and alerts.
+
+```
+pip install pytest
+pytest tests/ -v
 ```
 
 ---
@@ -136,6 +159,7 @@ PhantomEye/
 ├── lookup.py            # O(1) IOC lookup engine
 ├── alerts.py            # Alert dispatch + 24h deduplication
 ├── scanner.py           # Firewall / DNS / email scan engines
+├── requirements.txt     # Python version and dev dependencies
 ├── gui/
 │   ├── app.py           # Main window
 │   ├── theme.py         # Shared colours and widget helpers
@@ -144,6 +168,11 @@ PhantomEye/
 │   ├── tab_email.py
 │   ├── tab_alerts.py
 │   └── tab_feeds.py
+├── tests/
+│   ├── test_utils.py
+│   ├── test_feeds.py
+│   ├── test_lookup.py
+│   └── test_alerts.py
 ├── Install_PhantomEye.bat
 └── Uninstall_PhantomEye.bat
 ```
@@ -172,7 +201,28 @@ PhantomEye is a **known-bad detector** — it matches against public threat inte
 
 ## Changelog
 
-**v1.1** *(current)*
+**v1.2** *(current)*
+- Fixed: IPv6 validation rewritten with stdlib `ipaddress` module — handles every RFC edge case correctly
+- Fixed: `messagebox` calls moved off background threads (prevented random GUI crashes)
+- Fixed: `init_database` / `load_ioc_cache` no longer called twice on `--gui` path
+- Fixed: Empty lookup query now returns explicit error instead of false "Clean" verdict
+- Fixed: SMTP now uses `ssl.create_default_context()` — server certificate is verified
+- Fixed: Email IP extraction restricted to `Received:` headers only — eliminates false positives
+- Fixed: Firewall scanner now checks source IP — inbound attacks from known bad actors detected
+- Fixed: Double whitelist check in feed parser removed
+- Fixed: All `except: pass` replaced with proper `log.warning` / `log.error` calls
+- New: `_meta_cache` in `feeds.py` — zero extra DB connections per lookup
+- New: `--version` CLI flag
+- New: `--check` CLI flag — validates config, DB connectivity, and feed health
+- New: Feed health warning card on Dashboard turns red when any feed has failed
+- New: Last Scan time stat card on Dashboard
+- New: `ALERT_HISTORY_LIMIT` moved to `config.py` (was hardcoded 500)
+- New: 86 unit tests across `utils`, `feeds`, `lookup`, `alerts` — run with `pytest tests/`
+- New: `requirements.txt` documents Python 3.10+ requirement and dev dependencies
+- Improved: `is_private_ip` now correctly catches multicast, reserved, and unspecified ranges
+- Improved: `parse_feed` builds a set directly — no list→set round-trip
+
+**v1.1**
 - Refactored into 14 modules (was a 1,512-line single file)
 - Fixed: Lookup and email analysis now run in background threads
 - Fixed: Firewall scanner checks ALLOW *and* DROP entries
