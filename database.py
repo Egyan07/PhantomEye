@@ -1,5 +1,5 @@
 # =============================================================================
-#   database.py — PhantomEye v1.1
+#   database.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Database initialisation.

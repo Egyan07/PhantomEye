@@ -1,5 +1,5 @@
 # =============================================================================
-#   gui/theme.py — PhantomEye v1.1
+#   gui/theme.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Shared colour palette and reusable widget factory used by all tabs.

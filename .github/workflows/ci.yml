@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        run: pytest tests/ -v --cov=. --cov-report=term-missing
+
+      - name: Verify no syntax errors in all modules
+        run: python -m py_compile alerts.py config.py database.py feeds.py logger.py lookup.py main.py scanner.py utils.py gui/app.py gui/tab_alerts.py gui/tab_dashboard.py gui/tab_email.py gui/tab_feeds.py gui/tab_lookup.py gui/theme.py

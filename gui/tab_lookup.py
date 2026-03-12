@@ -1,5 +1,5 @@
 # =============================================================================
-#   gui/tab_lookup.py — PhantomEye v1.1
+#   gui/tab_lookup.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   IP / Domain Lookup tab.

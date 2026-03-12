@@ -1,5 +1,5 @@
 # =============================================================================
-#   gui/tab_email.py — PhantomEye v1.1
+#   gui/tab_email.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Email Header Analyser tab.
