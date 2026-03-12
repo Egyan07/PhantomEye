@@ -1,14 +1,14 @@
 @echo off
 :: =============================================================================
-::  PhantomEye v1.1 — Uninstaller
+::  PhantomEye v1.2 — Uninstaller
 ::  Red Parrot Accounting Ltd
 :: =============================================================================
 
-title PhantomEye v1.1 — Uninstaller
+title PhantomEye v1.2 — Uninstaller
 
 echo.
 echo  ============================================================
-echo   PhantomEye v1.1 — Uninstaller
+echo   PhantomEye v1.2 — Uninstaller
 echo   Red Parrot Accounting Ltd
 echo  ============================================================
 echo.
@@ -35,6 +35,6 @@ if /i "%KEEP_LOGS%"=="N" (
 )
 
 echo.
-echo  PhantomEye v1.1 has been uninstalled.
+echo  PhantomEye v1.2 has been uninstalled.
 echo.
 pause

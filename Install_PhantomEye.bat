@@ -1,6 +1,6 @@
 @echo off
 :: =============================================================================
-::  PhantomEye v1.1 — Installer
+::  PhantomEye v1.2 — Installer
 ::  Red Parrot Accounting Ltd
 ::
 ::  What this does:
@@ -12,11 +12,11 @@
 ::    6. Launches the GUI
 :: =============================================================================
 
-title PhantomEye v1.1 — Installer
+title PhantomEye v1.2 — Installer
 
 echo.
 echo  ============================================================
-echo   PhantomEye v1.1 — Threat Intelligence Platform
+echo   PhantomEye v1.2 — Threat Intelligence Platform
 echo   Red Parrot Accounting Ltd
 echo  ============================================================
 echo.

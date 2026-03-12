@@ -1,5 +1,5 @@
 # =============================================================================
-#   gui/app.py — PhantomEye v1.1
+#   gui/app.py — PhantomEye v1.2
 #   Coded by Egyan | Red Parrot Accounting Ltd
 #
 #   Main application window.
@@ -19,14 +19,14 @@ from gui.tab_feeds     import FeedsTab
 
 class PhantomEyeApp:
     """
-    Main GUI window for PhantomEye v1.1.
+    Main GUI window for PhantomEye v1.2.
     Coded by Egyan | Red Parrot Accounting Ltd
     """
 
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(
-            "👁  PhantomEye v1.1  |  Coded by Egyan  |  Red Parrot Accounting Ltd"
+            "👁  PhantomEye v1.2  |  Coded by Egyan  |  Red Parrot Accounting Ltd"
         )
         self.root.geometry("1050x700")
         self.root.configure(bg=BG)
@@ -115,7 +115,7 @@ class PhantomEyeApp:
 
     def _build_status_bar(self):
         self._status_var = tk.StringVar(
-            value="Ready — PhantomEye v1.1 | Red Parrot Accounting Ltd"
+            value="Ready — PhantomEye v1.2 | Red Parrot Accounting Ltd"
         )
         tk.Label(
             self.root,

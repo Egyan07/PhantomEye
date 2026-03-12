@@ -1,5 +1,5 @@
 # =============================================================================
-#   gui/tab_feeds.py — PhantomEye v1.1
+#   gui/tab_feeds.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Feed Status tab — shows IOC count, last update time, and status per feed.
@@ -104,5 +104,6 @@ class FeedsTab:
             total = cur.fetchone()[0]
             conn.close()
             self.total_label.config(text=f"Total IOCs in database: {total:,}")
-        except Exception:
-            pass
+        except Exception as e:
+            from logger import log
+            log.warning("Feed status refresh error: %s", e)

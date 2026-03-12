@@ -1,5 +1,5 @@
 # =============================================================================
-#   logger.py — PhantomEye v1.1
+#   logger.py — PhantomEye v1.2
 #   Red Parrot Accounting Ltd
 #
 #   Centralised logging setup with log rotation.
