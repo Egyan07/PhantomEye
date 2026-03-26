@@ -201,7 +201,14 @@ PhantomEye is a **known-bad detector** — it matches against public threat inte
 
 ## Changelog
 
-**v1.2** *(current)*
+**v1.2.1** *(current)*
+- Fixed: `database.py` — `init_database()` had no `try/finally`; any exception between `sqlite3.connect()` and `conn.close()` left the file handle open until GC
+- Fixed: `alerts.py` — `smtplib.SMTP()` called without `timeout`; unreachable SMTP server blocked the alert thread for the full OS TCP timeout (~2 min); now `timeout=30`
+- Fixed: `feeds.py` — `load_ioc_cache()`: `conn.close()` was inside the `try` block, skipped on any query exception; moved to `finally`
+- Fixed: `feeds.py` — `update_feeds()`: no `try/finally` around the connection; `conn.close()` unreachable on exception; wrapped in `try/finally`
+- Fixed: `feeds.py` — `check_stale_feeds()`: same connection-leak pattern as `load_ioc_cache()`; `conn.close()` moved to `finally`
+
+**v1.2**
 - Fixed: IPv6 validation rewritten with stdlib `ipaddress` module — handles every RFC edge case correctly
 - Fixed: `messagebox` calls moved off background threads (prevented random GUI crashes)
 - Fixed: `init_database` / `load_ioc_cache` no longer called twice on `--gui` path

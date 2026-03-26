@@ -1,5 +1,5 @@
 # =============================================================================
-#   alerts.py — PhantomEye v1.2
+#   alerts.py — PhantomEye v1.2.1
 #   Red Parrot Accounting Ltd
 #
 #   Central alert dispatcher.
@@ -10,6 +10,11 @@
 #   - Bare except: pass replaced with explicit logging so failures are visible.
 #   - _is_duplicate and record_alert now share a single cursor to avoid
 #     any TOCTOU window on the deduplication query.
+#
+#   FIX v1.2.1:
+#   - _send_email: added timeout=30 to smtplib.SMTP() — without a timeout
+#     the constructor blocks until the OS TCP timeout (~2 min) on an
+#     unreachable SMTP server, stalling the alert dispatch thread.
 # =============================================================================
 
 import os
@@ -159,8 +164,11 @@ def _send_email(
     msg.attach(MIMEText(body, "plain"))
 
     # FIX: use a proper SSL context so the server certificate is verified
+    # FIX: add timeout=30 so an unreachable SMTP server does not block the
+    # calling thread indefinitely (default has no timeout — OS TCP timeout
+    # can be 2+ minutes, stalling the alert dispatch loop).
     ctx = ssl.create_default_context()
-    with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT) as s:
+    with smtplib.SMTP(EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT, timeout=30) as s:
         s.ehlo()
         s.starttls(context=ctx)
         s.login(EMAIL_FROM, password)

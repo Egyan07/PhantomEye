@@ -1,5 +1,5 @@
 # =============================================================================
-#   feeds.py — PhantomEye v1.2
+#   feeds.py — PhantomEye v1.2.1
 #   Red Parrot Accounting Ltd
 #
 #   Threat feed download, parsing, and IOC database ingestion.
@@ -13,6 +13,14 @@
 #     total_iocs / last_updated — those values are populated once here
 #     at cache-load time and refreshed after every feed update.
 #   - Bare except: pass replaced with logged warnings throughout.
+#
+#   FIXES v1.2.1:
+#   - load_ioc_cache: conn.close() moved to finally — was skipped on any
+#     query exception, leaking the SQLite file handle.
+#   - update_feeds: entire connection block now wrapped in try/finally —
+#     conn.close() at the end of the function was unreachable on exception.
+#   - check_stale_feeds: conn.close() moved to finally — same pattern as
+#     load_ioc_cache.
 # =============================================================================
 
 import os
@@ -43,24 +51,29 @@ def load_ioc_cache() -> dict[str, set]:
     Also populates _meta_cache so lookups never need extra DB round-trips.
     Call this once at startup and after every feed update.
     """
-    global _ioc_cache, _meta_cache
+    global _ioc_cache
     _ioc_cache = {"ip": set(), "domain": set()}
     try:
         conn = sqlite3.connect(DB_PATH)
-        cur  = conn.cursor()
+        # FIX: conn.close() moved into a finally block so it is always called
+        # even when a query raises.  Previously it sat inside the try body and
+        # was skipped on any exception, leaking the file handle.
+        try:
+            cur = conn.cursor()
 
-        cur.execute("SELECT type, value FROM iocs")
-        for ioc_type, value in cur.fetchall():
-            if ioc_type in _ioc_cache:
-                _ioc_cache[ioc_type].add(value.lower())
+            cur.execute("SELECT type, value FROM iocs")
+            for ioc_type, value in cur.fetchall():
+                if ioc_type in _ioc_cache:
+                    _ioc_cache[ioc_type].add(value.lower())
 
-        cur.execute("SELECT MAX(last_updated) FROM feed_status WHERE status='OK'")
-        row = cur.fetchone()
-        _meta_cache["last_updated"] = row[0] if row and row[0] else "Never"
-        _meta_cache["total_iocs"]   = (
-            len(_ioc_cache["ip"]) + len(_ioc_cache["domain"])
-        )
-        conn.close()
+            cur.execute("SELECT MAX(last_updated) FROM feed_status WHERE status='OK'")
+            row = cur.fetchone()
+            _meta_cache["last_updated"] = row[0] if row and row[0] else "Never"
+            _meta_cache["total_iocs"]   = (
+                len(_ioc_cache["ip"]) + len(_ioc_cache["domain"])
+            )
+        finally:
+            conn.close()
         log.info(
             "IOC cache loaded: %d IPs, %d domains",
             len(_ioc_cache["ip"]), len(_ioc_cache["domain"])
@@ -223,67 +236,74 @@ def update_feeds(callback=None) -> int:
     log.info("PhantomEye v1.2 — Updating threat feeds")
     log.info("=" * 60)
 
+    # FIX: wrap the entire connection lifetime in try/finally so the handle is
+    # always closed — even if an unexpected exception escapes the feed loop.
+    # Previously conn.close() at the bottom was unreachable on any exception,
+    # leaving the SQLite file handle open until the GC ran.
     conn      = sqlite3.connect(DB_PATH)
     cur       = conn.cursor()
     now       = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     total_new = 0
+    total     = 0
 
-    for feed_name, feed_config in THREAT_FEEDS.items():
-        label = feed_config["label"]
-        if callback:
-            callback(f"Downloading: {label}...")
-        log.info("Downloading: %s", label)
+    try:
+        for feed_name, feed_config in THREAT_FEEDS.items():
+            label = feed_config["label"]
+            if callback:
+                callback(f"Downloading: {label}...")
+            log.info("Downloading: %s", label)
 
-        content = download_feed(feed_name, feed_config)
-        if content is None:
+            content = download_feed(feed_name, feed_config)
+            if content is None:
+                cur.execute("""
+                    INSERT OR REPLACE INTO feed_status
+                        (feed_name, label, last_updated, ioc_count, status)
+                    VALUES (?, ?, ?, 0, 'FAILED')
+                """, (feed_name, label, now))
+                conn.commit()
+                msg = f"  {label}: FAILED (no cache available)"
+                log.warning(msg)
+                if callback:
+                    callback(msg)
+                continue
+
+            iocs        = parse_feed(content, feed_name, feed_config)
+            ioc_type    = feed_config["type"]
+            threat_type = _THREAT_MAP.get(feed_name, "malicious")
+
+            added = 0
+            for ioc_value in iocs:
+                try:
+                    cur.execute("""
+                        INSERT OR IGNORE INTO iocs
+                            (type, value, threat_type, source, first_added, last_updated)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (ioc_type, ioc_value, threat_type, feed_name, now, now))
+                    if cur.rowcount > 0:
+                        added += 1
+                except Exception as e:
+                    log.debug("IOC insert failed [%s / %s]: %s", feed_name, ioc_value, e)
+
+            cur.execute(
+                "UPDATE iocs SET last_updated=? WHERE source=?",
+                (now, feed_name)
+            )
             cur.execute("""
                 INSERT OR REPLACE INTO feed_status
                     (feed_name, label, last_updated, ioc_count, status)
-                VALUES (?, ?, ?, 0, 'FAILED')
-            """, (feed_name, label, now))
+                VALUES (?, ?, ?, ?, 'OK')
+            """, (feed_name, label, now, len(iocs)))
+
             conn.commit()
-            msg = f"  {label}: FAILED (no cache available)"
-            log.warning(msg)
+            total_new += added
+            log.info("  %-30s %6d IOCs (%d new)", label, len(iocs), added)
             if callback:
-                callback(msg)
-            continue
+                callback(f"  {label}: {len(iocs):,} IOCs ({added} new)")
 
-        iocs        = parse_feed(content, feed_name, feed_config)
-        ioc_type    = feed_config["type"]
-        threat_type = _THREAT_MAP.get(feed_name, "malicious")
-
-        added = 0
-        for ioc_value in iocs:
-            try:
-                cur.execute("""
-                    INSERT OR IGNORE INTO iocs
-                        (type, value, threat_type, source, first_added, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (ioc_type, ioc_value, threat_type, feed_name, now, now))
-                if cur.rowcount > 0:
-                    added += 1
-            except Exception as e:
-                log.debug("IOC insert failed [%s / %s]: %s", feed_name, ioc_value, e)
-
-        cur.execute(
-            "UPDATE iocs SET last_updated=? WHERE source=?",
-            (now, feed_name)
-        )
-        cur.execute("""
-            INSERT OR REPLACE INTO feed_status
-                (feed_name, label, last_updated, ioc_count, status)
-            VALUES (?, ?, ?, ?, 'OK')
-        """, (feed_name, label, now, len(iocs)))
-
-        conn.commit()
-        total_new += added
-        log.info("  %-30s %6d IOCs (%d new)", label, len(iocs), added)
-        if callback:
-            callback(f"  {label}: {len(iocs):,} IOCs ({added} new)")
-
-    cur.execute("SELECT COUNT(*) FROM iocs")
-    total = cur.fetchone()[0]
-    conn.close()
+        cur.execute("SELECT COUNT(*) FROM iocs")
+        total = cur.fetchone()[0]
+    finally:
+        conn.close()
 
     # Rebuild both caches after update
     load_ioc_cache()
@@ -306,15 +326,20 @@ def check_stale_feeds() -> list[str]:
     stale = []
     try:
         conn = sqlite3.connect(DB_PATH)
-        cur  = conn.cursor()
-        for feed_name in THREAT_FEEDS:
-            cur.execute(
-                "SELECT status FROM feed_status WHERE feed_name=?", (feed_name,)
-            )
-            row = cur.fetchone()
-            if row is None or row[0] != "OK":
-                stale.append(feed_name)
-        conn.close()
+        # FIX: conn.close() moved into a finally block so it is always called
+        # even when a SELECT raises.  Previously it sat at the bottom of the
+        # try body and was skipped on any exception, leaking the file handle.
+        try:
+            cur = conn.cursor()
+            for feed_name in THREAT_FEEDS:
+                cur.execute(
+                    "SELECT status FROM feed_status WHERE feed_name=?", (feed_name,)
+                )
+                row = cur.fetchone()
+                if row is None or row[0] != "OK":
+                    stale.append(feed_name)
+        finally:
+            conn.close()
     except Exception as e:
         log.warning("Could not check feed health: %s", e)
     return stale
