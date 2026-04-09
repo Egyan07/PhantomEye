@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#2ea043"/>
+      <stop offset="100%" style="stop-color:#1f6feb"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" fill="url(#bg)" rx="12"/>
+  <text x="640" y="145" text-anchor="middle" fill="url(#accent)" font-family="Consolas,monospace" font-size="72" font-weight="bold">PhantomEye</text>
+  <text x="640" y="200" text-anchor="middle" fill="#8b949e" font-family="Consolas,monospace" font-size="24">See the threats they can't.</text>
+  <text x="640" y="260" text-anchor="middle" fill="#30363d" font-family="Consolas,monospace" font-size="16">Free Threat Intelligence Platform for Windows</text>
+  <ellipse cx="640" cy="70" rx="40" ry="22" fill="none" stroke="#2ea043" stroke-width="3"/>
+  <circle cx="640" cy="70" r="10" fill="#2ea043"/>
+  <circle cx="640" cy="70" r="4" fill="#0d1117"/>
+</svg>
