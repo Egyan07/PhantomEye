@@ -158,6 +158,14 @@ def lookup_ioc(value: str, ioc_type: str = None) -> dict:
 
         log.debug("Could not fetch IOC metadata for %s: %s", value, e)
 
+    # --- Geolocation enrichment for IPs ---
+    if ioc_type == "ip":
+        from geolocation import geolocate_ip
+
+        geo = geolocate_ip(value)
+        if geo:
+            result["geolocation"] = geo
+
     return result
 
 
@@ -199,6 +207,14 @@ def format_lookup_result(result: dict) -> str:
                 lines.append(f"    First seen  : {match.get('first_added', '')}")
         lines.append("")
         lines.append("  ACTION: Block immediately if this is an active connection.")
+
+        if result.get("geolocation"):
+            geo = result["geolocation"]
+            lines.append("")
+            lines.append(f"  Location    : {geo['city']}, {geo['country']}")
+            lines.append(f"  ISP         : {geo['isp']}")
+            lines.append(f"  Org         : {geo['org']}")
+            lines.append(f"  AS          : {geo['as_number']}")
     else:
         if is_whitelisted(result["value"], result["type"]):
             lines.append("  VERDICT   : WHITELISTED — Known safe")
