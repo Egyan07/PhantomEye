@@ -133,20 +133,41 @@ class PhantomEyeApp:
     # -----------------------------------------------------------------------
 
     def _build_status_bar(self) -> None:
+        bar = tk.Frame(self.root, bg=PANEL)
+        bar.pack(side=tk.BOTTOM, fill=tk.X)
+
         self._status_var = tk.StringVar(value="Ready — PhantomEye v2.0.0 | Red Parrot Accounting Ltd")
         tk.Label(
-            self.root,
+            bar,
             textvariable=self._status_var,
             bg=PANEL,
             fg=MUTED,
             font=("Consolas", 9),
             anchor="w",
             padx=10,
-        ).pack(side=tk.BOTTOM, fill=tk.X)
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self._clock_var = tk.StringVar()
+        tk.Label(
+            bar,
+            textvariable=self._clock_var,
+            bg=PANEL,
+            fg=MUTED,
+            font=("Consolas", 9),
+            padx=10,
+        ).pack(side=tk.RIGHT)
+
+        self._update_clock()
 
     def set_status(self, msg: str) -> None:
         self._status_var.set(msg)
         self.root.update_idletasks()
+
+    def _update_clock(self) -> None:
+        from datetime import datetime
+
+        self._clock_var.set(datetime.now().strftime("%H:%M:%S"))
+        self.root.after(1000, self._update_clock)
 
     # -----------------------------------------------------------------------
     #   Tab switch handler

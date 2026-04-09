@@ -174,12 +174,16 @@ class DashboardTab:
     #   Internal
     # -----------------------------------------------------------------------
 
-    def _stat_card(self, parent: tk.Frame, label: str, value: str, colour: str) -> tk.Label:
+    def _stat_card(self, parent: tk.Frame, label: str, value: str, colour: str, command=None) -> tk.Label:
         card = tk.Frame(parent, bg=PANEL, relief=tk.FLAT, bd=1)
         card.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=5)
         tk.Label(card, text=label, bg=PANEL, fg=MUTED, font=("Consolas", 9)).pack(pady=(8, 0))
         lbl = tk.Label(card, text=value, bg=PANEL, fg=colour, font=("Consolas", 20, "bold"))
         lbl.pack(pady=(0, 8))
+        if command:
+            card.config(cursor="hand2")
+            card.bind("<Button-1>", lambda _e: command())
+            lbl.bind("<Button-1>", lambda _e: command())
         return lbl
 
     def _write(self, msg: str, tag: str = "") -> None:

@@ -22,6 +22,10 @@ from gui.theme import (
     ACCENT2,
     BG,
     DANGER,
+    ENTRY_BG,
+    FG,
+    MUTED,
+    PANEL,
     WARN,
     apply_treeview_style,
     make_button,
@@ -55,6 +59,24 @@ class AlertsTab:
         btn_clear.pack(side=tk.LEFT)
         Tooltip(btn_clear, "Permanently delete all alert history")
 
+        # --- Search bar ---
+        search_frame = tk.Frame(t, bg=BG)
+        search_frame.pack(fill=tk.X, padx=15, pady=(0, 4))
+        tk.Label(search_frame, text="Search:", bg=BG, fg=MUTED, font=("Consolas", 9)).pack(side=tk.LEFT, padx=(0, 6))
+        self._search_var = tk.StringVar()
+        self._search_var.trace_add("write", lambda *_: self._filter_alerts())
+        self._search_entry = tk.Entry(
+            search_frame,
+            textvariable=self._search_var,
+            bg=ENTRY_BG,
+            fg=FG,
+            font=("Consolas", 10),
+            insertbackground=FG,
+            relief=tk.FLAT,
+            bd=4,
+        )
+        self._search_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
         # --- Treeview ---
         cols = ("Time", "Severity", "Type", "IOC", "Context")
         widths = (135, 80, 240, 160, 260)
@@ -74,11 +96,19 @@ class AlertsTab:
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(15, 0), pady=(0, 10))
         scrollbar.pack(side=tk.LEFT, fill=tk.Y, pady=(0, 10))
 
+        # --- Context menu ---
+        self._context_menu = tk.Menu(t, tearoff=0, bg=PANEL, fg=FG, font=("Consolas", 9))
+        self._context_menu.add_command(label="Copy IOC", command=self._copy_ioc)
+        self._context_menu.add_command(label="Lookup IOC", command=self._lookup_ioc)
+        self.tree.bind("<Button-3>", self._show_context_menu)
+
+        self._all_alerts: list = []
         self.refresh()
 
     # -----------------------------------------------------------------------
 
     def refresh(self) -> None:
+        self._all_alerts = []
         for item in self.tree.get_children():
             self.tree.delete(item)
         if not os.path.exists(DB_PATH):
@@ -93,14 +123,52 @@ class AlertsTab:
             """,
                 (ALERT_HISTORY_LIMIT,),
             )
-            for row in cur.fetchall():
-                tag = "critical" if row[1] == "CRITICAL" else "warning"
-                self.tree.insert("", tk.END, values=row, tags=(tag,))
+            self._all_alerts = cur.fetchall()
             conn.close()
+            self._display_alerts(self._all_alerts)
         except Exception as e:
             from logger import log
 
             log.warning("Alert history refresh error: %s", e)
+
+    def _display_alerts(self, alerts: list) -> None:
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        for row in alerts:
+            tag = "critical" if row[1] == "CRITICAL" else "warning"
+            self.tree.insert("", tk.END, values=row, tags=(tag,))
+
+    def _filter_alerts(self) -> None:
+        query = self._search_var.get().lower().strip()
+        if not query:
+            self._display_alerts(self._all_alerts)
+            return
+        filtered = [row for row in self._all_alerts if any(query in str(field).lower() for field in row)]
+        self._display_alerts(filtered)
+
+    def _show_context_menu(self, event) -> None:
+        item = self.tree.identify_row(event.y)
+        if item:
+            self.tree.selection_set(item)
+            self._context_menu.post(event.x_root, event.y_root)
+
+    def _copy_ioc(self) -> None:
+        selected = self.tree.selection()
+        if not selected:
+            return
+        ioc_value = self.tree.item(selected[0])["values"][3]  # IOC column
+        self.parent.clipboard_clear()
+        self.parent.clipboard_append(str(ioc_value))
+
+    def _lookup_ioc(self) -> None:
+        selected = self.tree.selection()
+        if not selected:
+            return
+        ioc_value = str(self.tree.item(selected[0])["values"][3])  # noqa: F841
+        # Find the notebook and switch to lookup tab
+        notebook = self.parent.master
+        if hasattr(notebook, "select"):
+            notebook.select(1)  # Lookup tab index
 
     def _clear_alerts(self) -> None:
         if not messagebox.askyesno("PhantomEye", "Clear all alert history from database?"):
