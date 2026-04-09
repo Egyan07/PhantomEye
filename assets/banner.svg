@@ -1,16 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320">
   <rect width="1280" height="320" fill="#0d1117"/>
 
-  <!-- Phantom silhouette — hooded figure with glowing eye -->
-  <g transform="translate(100, 25)">
-    <!-- Hood/cloak body -->
-    <path d="M100,20 C60,20 30,55 30,95 L30,140 C30,165 40,185 55,200 L25,260 L55,240 L75,260 L95,240 L115,260 L135,240 L155,260 L185,260 L155,200 C170,185 180,165 180,140 L180,95 C180,55 150,20 110,20 Z" fill="#161b22"/>
-    <!-- Hood inner shadow -->
-    <path d="M100,28 C65,28 38,58 38,95 L38,130 C38,135 40,140 42,145 L70,145 C75,120 85,100 105,100 C125,100 135,120 140,145 L168,145 C170,140 172,135 172,130 L172,95 C172,58 145,28 110,28 Z" fill="#0d1117"/>
-    <!-- Glowing eye — single, menacing -->
-    <circle cx="110" cy="115" r="8" fill="#2ea043" opacity="0.9"/>
-    <circle cx="110" cy="115" r="4" fill="#3fb950"/>
-    <circle cx="110" cy="115" r="14" fill="none" stroke="#2ea043" stroke-width="1" opacity="0.3"/>
+  <!-- Obito-style masked figure -->
+  <g transform="translate(95, 20)">
+    <!-- Cloak/high collar -->
+    <path d="M50,280 L30,180 C25,140 35,110 50,90 L60,75 L70,65 C80,55 95,45 110,42 C125,45 140,55 150,65 L160,75 L170,90 C185,110 195,140 190,180 L170,280 Z" fill="#161b22"/>
+
+    <!-- Head shape -->
+    <ellipse cx="110" cy="105" rx="55" ry="62" fill="#161b22"/>
+
+    <!-- Mask — orange swirl pattern (Obito's mask) -->
+    <ellipse cx="110" cy="105" rx="50" ry="57" fill="#e8630a"/>
+
+    <!-- Swirl lines on mask -->
+    <path d="M110,48 C85,55 70,75 68,100 C66,130 80,155 110,162" fill="none" stroke="#c44d00" stroke-width="2.5"/>
+    <path d="M110,55 C90,62 78,78 76,100 C74,125 85,148 110,155" fill="none" stroke="#c44d00" stroke-width="2"/>
+    <path d="M110,63 C95,68 86,82 84,100 C82,120 90,140 110,147" fill="none" stroke="#c44d00" stroke-width="1.5"/>
+
+    <!-- Single eye hole — right side (Obito's signature) -->
+    <ellipse cx="130" cy="100" rx="22" ry="20" fill="#0d1117"/>
+
+    <!-- Sharingan eye -->
+    <!-- Outer red iris -->
+    <circle cx="130" cy="100" r="14" fill="#b91c1c"/>
+    <!-- Inner ring -->
+    <circle cx="130" cy="100" r="10" fill="#dc2626"/>
+    <!-- Pupil -->
+    <circle cx="130" cy="100" r="4" fill="#0d1117"/>
+    <!-- Three tomoe -->
+    <g fill="#0d1117">
+      <!-- Tomoe 1 (top) -->
+      <circle cx="130" cy="89" r="2.2"/>
+      <path d="M130,89 Q134,91 132,95" stroke="#0d1117" stroke-width="1.5" fill="none"/>
+      <!-- Tomoe 2 (bottom-left) -->
+      <circle cx="121" cy="106" r="2.2"/>
+      <path d="M121,106 Q123,102 127,103" stroke="#0d1117" stroke-width="1.5" fill="none"/>
+      <!-- Tomoe 3 (bottom-right) -->
+      <circle cx="139" cy="106" r="2.2"/>
+      <path d="M139,106 Q137,102 133,103" stroke="#0d1117" stroke-width="1.5" fill="none"/>
+    </g>
+    <!-- Sharingan glow -->
+    <circle cx="130" cy="100" r="16" fill="none" stroke="#dc2626" stroke-width="1" opacity="0.4"/>
+    <circle cx="130" cy="100" r="20" fill="none" stroke="#dc2626" stroke-width="0.5" opacity="0.2"/>
+
+    <!-- High collar details -->
+    <path d="M60,150 L55,170 C50,190 48,210 50,230 L55,260" fill="none" stroke="#21262d" stroke-width="1.5"/>
+    <path d="M160,150 L165,170 C170,190 172,210 170,230 L165,260" fill="none" stroke="#21262d" stroke-width="1.5"/>
   </g>
 
   <!-- PhantomEye text -->
