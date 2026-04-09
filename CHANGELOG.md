@@ -2,6 +2,18 @@
 
 All notable changes to PhantomEye are documented here.
 
+## v1.4.0
+
+- **New:** IP geolocation enrichment — lookup results show country, city, ISP, and AS number (via ip-api.com)
+- **New:** HTML report export — generate dark-themed HTML reports from alert history
+- **New:** Real-time connection monitor tab — polls netstat and checks active connections against threat feeds
+- **New:** Tooltip widget — hover tooltips on dashboard buttons
+- **New:** `monitor.py` — netstat parsing and IOC checking module
+- **New:** `reports.py` — self-contained HTML report generation
+- **New:** `gui/tab_monitor.py` — connection monitor GUI tab
+- **New:** `gui/tooltip.py` — reusable tooltip component
+- **Improved:** 148 total tests (28 new: geolocation, reports, monitor)
+
 ## v1.3.0
 
 - **New:** 28 scanner tests (firewall log, DNS cache, email header analysis) — 120+ total

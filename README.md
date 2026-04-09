@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/Egyan07/PhantomEye/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Egyan07/PhantomEye/ci.yml?label=CI&logo=githubactions&logoColor=white" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-120%2B%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-148%2B%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Dependencies">
   <a href="https://github.com/Egyan07/PhantomEye/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Egyan07/PhantomEye" alt="License"></a>
@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <strong>8 threat feeds · 120+ tests · zero dependencies · 3 scan engines · 40,000+ IOCs</strong>
+  <strong>8 threat feeds · 148+ tests · zero dependencies · 3 scan engines · IP geolocation · 40,000+ IOCs</strong>
 </p>
 
 <p align="center">
@@ -82,6 +82,8 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Email Header Analyzer | Paste raw Outlook headers — extracts and checks all relay IPs and sender domains |
 | IP / Domain Lookup | Instant verdict from 40,000+ IOCs — paste any IP, domain, or full URL |
 | Multi-feed matching | Each IOC is checked against all 8 feeds; results show which feed flagged it |
+| Connection Monitor | Real-time netstat polling checks active TCP connections against threat feeds |
+| IP Geolocation | Lookup results show country, city, ISP, and AS number for malicious IPs |
 
 ### Monitoring
 
@@ -93,12 +95,13 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Email notifications | Optional SMTP alerts with TLS and verified server certificates |
 | Alert history | Full timestamped log with search, filter, and CSV export |
 | Feed status dashboard | Per-feed IOC count, last-update timestamp, and health indicator |
+| HTML report export | Generate shareable dark-themed HTML reports from alert history |
 
 ### Developer Experience
 
 | Feature | Description |
 |---|---|
-| 120+ unit tests | Covers utils, feeds, lookup, alerts, database, and all three scanners |
+| 148+ unit tests | Covers utils, feeds, lookup, alerts, database, scanners, geolocation, reports, and monitor |
 | Zero runtime dependencies | Runs entirely on the Python standard library |
 | Health check CLI | `--check` validates config, DB connectivity, and feed freshness |
 | Clean architecture | 14 focused modules — no 1,000-line files |
@@ -169,6 +172,9 @@ pytest tests/ -v
 | Alerts | `test_alerts.py` | Dispatch, deduplication, email formatting |
 | Database | `test_database.py` | Schema creation, read/write, migrations |
 | Scanner | `test_scanner.py` | Firewall, DNS, and email scanners |
+| Geolocation | `test_geolocation.py` | IP geolocation lookups, caching, error handling |
+| Reports | `test_reports.py` | HTML report generation and formatting |
+| Monitor | `test_monitor.py` | Netstat parsing, connection monitoring, IOC checks |
 
 ---
 
@@ -186,8 +192,11 @@ pytest tests/ -v
         │  feeds.py  │   │scanner.py │   │  gui/     │
         │  Download  │   │ Firewall  │   │  app.py   │
         │  & cache   │   │ DNS cache │   │  Tabs     │
-        └─────┬──────┘   │ Email hdr │   │  Theme    │
-              │          └─────┬─────┘   └─────┬─────┘
+        │            │   │ Email hdr │   │  Theme    │
+        │ monitor.py │   │           │   │           │
+        │ reports.py │   │geolocation│   │           │
+        │            │   │  .py      │   │           │
+        └─────┬──────┘   └─────┬─────┘   └─────┬─────┘
               │                │               │
         ┌─────▼──────────────▼───────────────▼──┐
         │            lookup.py                    │
