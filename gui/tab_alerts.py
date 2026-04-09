@@ -40,6 +40,7 @@ class AlertsTab:
         btn_row.pack(fill=tk.X, padx=15, pady=8)
         make_button(btn_row, "  Refresh", self.refresh, "#444").pack(side=tk.LEFT, padx=(0, 8))
         make_button(btn_row, "  Export CSV", self._export_csv, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
+        make_button(btn_row, "  Export HTML", self._export_html, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
         make_button(btn_row, "Clear All Alerts", self._clear_alerts, DANGER).pack(side=tk.LEFT)
 
         # --- Treeview ---
@@ -139,5 +140,24 @@ class AlertsTab:
                 writer.writerows(rows)
 
             messagebox.showinfo("PhantomEye", f"Exported {len(rows)} alerts to:\n{path}")
+        except Exception as e:
+            messagebox.showerror("PhantomEye", f"Export failed: {e}")
+
+    def _export_html(self) -> None:
+        if not os.path.exists(DB_PATH):
+            messagebox.showinfo("PhantomEye", "No database found.")
+            return
+        path = filedialog.asksaveasfilename(
+            defaultextension=".html",
+            filetypes=[("HTML files", "*.html"), ("All files", "*.*")],
+            initialfile=f"PhantomEye_Report_{datetime.now().strftime('%Y%m%d')}.html",
+        )
+        if not path:
+            return
+        try:
+            from reports import generate_alert_report
+
+            count = generate_alert_report(path)
+            messagebox.showinfo("PhantomEye", f"HTML report exported ({count} alerts):\n{path}")
         except Exception as e:
             messagebox.showerror("PhantomEye", f"Export failed: {e}")
