@@ -93,6 +93,33 @@ class LookupTab:
             "  • IPs from firewall alerts\n",
         )
 
+        # --- Bulk Lookup ---
+        tk.Label(
+            t,
+            text="Bulk Lookup \u2014 paste multiple IPs or domains (one per line):",
+            bg=BG,
+            fg=MUTED,
+            font=("Consolas", 9),
+        ).pack(anchor="w", padx=15, pady=(8, 2))
+
+        bulk_frame = tk.Frame(t, bg=BG)
+        bulk_frame.pack(fill=tk.X, padx=15, pady=(0, 4))
+
+        self.bulk_input = scrolledtext.ScrolledText(
+            bulk_frame,
+            bg=ENTRY_BG,
+            fg=FG,
+            font=("Consolas", 10),
+            height=5,
+            relief=tk.FLAT,
+            insertbackground=FG,
+        )
+        self.bulk_input.pack(fill=tk.X, pady=(0, 4))
+
+        btn_bulk = make_button(bulk_frame, "  Bulk Lookup", self._do_bulk_lookup, ACCENT2)
+        btn_bulk.pack(anchor="w")
+        Tooltip(btn_bulk, "Check all IPs and domains against threat feeds")
+
     # -----------------------------------------------------------------------
 
     def _do_lookup(self) -> None:
@@ -124,3 +151,50 @@ class LookupTab:
         self.result_box.config(state=tk.DISABLED)
         verdict = "MALICIOUS" if found else "Clean"
         self.set_status(f"Lookup complete: {value} — {verdict}")
+
+    # -----------------------------------------------------------------------
+    #   Bulk lookup
+    # -----------------------------------------------------------------------
+
+    def _do_bulk_lookup(self) -> None:
+        raw = self.bulk_input.get("1.0", tk.END).strip()
+        if not raw:
+            messagebox.showinfo("PhantomEye", "Paste IPs or domains, one per line.")
+            return
+
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        if not lines:
+            return
+
+        self.set_status(f"Bulk lookup: {len(lines)} items...")
+        self.result_box.config(state=tk.NORMAL)
+        self.result_box.delete("1.0", tk.END)
+        self.result_box.insert(tk.END, f"Checking {len(lines)} items...\n\n")
+        self.result_box.config(state=tk.DISABLED)
+
+        def task():
+            results = []
+            for value in lines:
+                result = lookup_ioc(value)
+                verdict = "MALICIOUS" if result["found"] else "Clean"
+                results.append((value, result["found"], verdict, result.get("type", "?")))
+
+            self.parent.after(0, self._show_bulk_results, results)
+
+        threading.Thread(target=task, daemon=True).start()
+
+    def _show_bulk_results(self, results: list) -> None:
+        self.result_box.config(state=tk.NORMAL)
+        self.result_box.delete("1.0", tk.END)
+
+        threats = sum(1 for _, found, _, _ in results if found)
+        self.result_box.insert(tk.END, f"Bulk Lookup Results \u2014 {len(results)} checked, {threats} threats found\n")
+        self.result_box.insert(tk.END, "=" * 55 + "\n\n")
+
+        for value, found, verdict, ioc_type in results:
+            tag = "danger" if found else "ok"
+            self.result_box.insert(tk.END, f"  {ioc_type.upper():6}  {value:<40}  {verdict}\n", tag)
+
+        self.result_box.insert(tk.END, "\n" + "=" * 55 + "\n")
+        self.result_box.config(state=tk.DISABLED)
+        self.set_status(f"Bulk lookup complete: {len(results)} checked, {threats} threats")

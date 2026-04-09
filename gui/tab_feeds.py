@@ -50,6 +50,10 @@ class FeedsTab:
 
         btn_remove = make_button(btn_row, "\u2212  Remove Feed", self._remove_feed, DANGER)
         btn_remove.pack(side=tk.LEFT)
+
+        btn_export = make_button(btn_row, "  Export Blocklist", self._export_blocklist, ACCENT)
+        btn_export.pack(side=tk.LEFT, padx=(8, 0))
+        Tooltip(btn_export, "Export all malicious IPs as a firewall blocklist")
         Tooltip(btn_remove, "Remove selected custom feed")
 
         cols = ("Feed Name", "IOC Count", "Last Updated", "Status")
@@ -126,6 +130,40 @@ class FeedsTab:
         if key and messagebox.askyesno("PhantomEye", f"Remove custom feed '{feed_label}'?"):
             remove_custom_feed(key)
             self.refresh()
+
+    def _export_blocklist(self) -> None:
+        from datetime import datetime
+        from tkinter import filedialog, messagebox
+
+        if not os.path.exists(DB_PATH):
+            messagebox.showinfo("PhantomEye", "No database found. Update feeds first.")
+            return
+
+        path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            initialfile=f"PhantomEye_Blocklist_{datetime.now().strftime('%Y%m%d')}.txt",
+        )
+        if not path:
+            return
+
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            cur.execute("SELECT DISTINCT value FROM iocs WHERE type='ip' ORDER BY value")
+            ips = [row[0] for row in cur.fetchall()]
+            conn.close()
+
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(f"# PhantomEye IP Blocklist \u2014 {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+                f.write(f"# Total: {len(ips)} malicious IPs\n")
+                f.write("# Import into your firewall or network appliance\n\n")
+                for ip in ips:
+                    f.write(ip + "\n")
+
+            messagebox.showinfo("PhantomEye", f"Blocklist exported ({len(ips)} IPs):\n{path}")
+        except Exception as e:
+            messagebox.showerror("PhantomEye", f"Export failed: {e}")
 
     # -----------------------------------------------------------------------
 
