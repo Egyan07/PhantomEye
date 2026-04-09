@@ -2,6 +2,16 @@
 
 All notable changes to PhantomEye are documented here.
 
+## v1.5.0
+
+- **New:** Tooltips on all buttons across all 6 tabs
+- **New:** Keyboard shortcuts — F5 (refresh), Ctrl+U (update feeds), Ctrl+F (firewall scan), Ctrl+D (DNS scan), Ctrl+1-6 (switch tabs)
+- **New:** Shortcuts info bar on Dashboard
+- **New:** SECURITY.md — vulnerability reporting policy
+- **New:** GitHub issue templates (structured bug reports and feature requests)
+- **New:** Dependabot — automated dependency update monitoring
+- **New:** CodeQL — SAST security scanning in CI
+
 ## v1.4.0
 
 - **New:** IP geolocation enrichment — lookup results show country, city, ISP, and AS number (via ip-api.com)

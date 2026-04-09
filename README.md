@@ -104,6 +104,9 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | 148+ unit tests | Covers utils, feeds, lookup, alerts, database, scanners, geolocation, reports, and monitor |
 | Zero runtime dependencies | Runs entirely on the Python standard library |
 | Health check CLI | `--check` validates config, DB connectivity, and feed freshness |
+| Keyboard shortcuts | F5, Ctrl+U/F/D, Ctrl+1-6 for quick navigation |
+| Tooltips | Hover tooltips on every action button |
+| CodeQL SAST | Automated security scanning on every push |
 | Clean architecture | 14 focused modules — no 1,000-line files |
 
 ---
@@ -268,6 +271,9 @@ Store your SMTP password as a Windows environment variable — **never hardcode 
 | Input validation | IPs validated via `ipaddress` stdlib; domains sanitised before lookup; URLs auto-stripped |
 | Alert integrity | 24-hour deduplication prevents alert flooding; history capped at configurable limit |
 | Resource safety | All database connections wrapped in `try/finally`; SMTP calls use explicit timeout (30 s) |
+| SAST scanning | CodeQL analysis on every push/PR and weekly schedule |
+
+For vulnerability reporting, see [SECURITY.md](SECURITY.md).
 
 ---
 
