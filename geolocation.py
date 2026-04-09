@@ -24,7 +24,7 @@ def geolocate_ip(ip: str) -> dict | None:
     """
     try:
         url = _GEO_API.format(ip=ip)
-        req = urllib.request.Request(url, headers={"User-Agent": "PhantomEye/2.0.0"})
+        req = urllib.request.Request(url, headers={"User-Agent": "PhantomEye/2.1.0"})
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         if data.get("status") != "success":

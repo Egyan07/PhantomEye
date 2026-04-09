@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/Egyan07/PhantomEye/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Egyan07/PhantomEye/ci.yml?label=CI&logo=githubactions&logoColor=white" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-175%2B%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-222%2B%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Dependencies">
   <a href="https://github.com/Egyan07/PhantomEye/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Egyan07/PhantomEye" alt="License"></a>
@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <strong>8 threat feeds · 175+ tests · custom feeds · zero dependencies · 3 scan engines · IP geolocation · 40,000+ IOCs</strong>
+  <strong>8 threat feeds · 222+ tests · custom feeds · zero dependencies · 3 scan engines · IP geolocation · 40,000+ IOCs</strong>
 </p>
 
 <p align="center">
@@ -85,6 +85,7 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Connection Monitor | Real-time netstat polling checks active TCP connections against threat feeds |
 | IP Geolocation | Lookup results show country, city, ISP, and AS number for malicious IPs |
 | Custom feeds | Add your own threat feed URLs — same parsing pipeline as built-in feeds |
+| Bulk lookup | Paste multiple IPs/domains — check all at once against threat feeds |
 
 ### Monitoring
 
@@ -98,12 +99,15 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Feed status dashboard | Per-feed IOC count, last-update timestamp, and health indicator |
 | HTML report export | Generate shareable dark-themed HTML reports from alert history |
 | Feed update progress | Visual progress bar during feed downloads |
+| Alert search | Real-time filtering across all alert fields |
+| IOC blocklist export | Export all malicious IPs as a firewall-ready text file |
+| Right-click menus | Copy IOC or quick-lookup from alert history |
 
 ### Developer Experience
 
 | Feature | Description |
 |---|---|
-| 175+ unit tests | Covers utils, feeds, lookup, alerts, database, scanners, geolocation, reports, monitor, custom feeds, and security |
+| 222+ unit tests | Covers utils, feeds, lookup, alerts, database, scanners, geolocation, reports, monitor, custom feeds, security, CLI, and theme |
 | Zero runtime dependencies | Runs entirely on the Python standard library |
 | Health check CLI | `--check` validates config, DB connectivity, and feed freshness |
 | Keyboard shortcuts | F5, Ctrl+U/F/D, Ctrl+1-6 for quick navigation |
@@ -183,6 +187,8 @@ pytest tests/ -v
 | Monitor | `test_monitor.py` | Netstat parsing, connection monitoring, IOC checks |
 | Custom Feeds | `test_custom_feeds.py` | Custom feed CRUD, validation, persistence (9 tests) |
 | Security | `test_security.py` | Path traversal, injection, oversized input validation (18 tests) |
+| CLI | `test_cli.py` | Argument parsing, version flag, check mode, banner output |
+| Theme | `test_theme.py` | Color constants, button factory, scrolled-text widget |
 
 ---
 

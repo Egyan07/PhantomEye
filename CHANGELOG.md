@@ -2,6 +2,17 @@
 
 All notable changes to PhantomEye are documented here.
 
+## v2.1.0
+
+- **New:** Bulk lookup — paste multiple IPs/domains, check all at once
+- **New:** IOC blocklist export — export all malicious IPs as a firewall-ready blocklist file
+- **New:** Alert search/filter — real-time search box in Alert History tab
+- **New:** Right-click context menu on alerts — copy IOC or quick lookup
+- **New:** Clickable stat cards on Dashboard (extensible with click handlers)
+- **New:** Live status bar clock
+- **New:** 47 new tests (222 total) — covers CLI, theme, and expanded edge cases across all modules
+- **Improved:** Lookup tab now supports single and bulk modes
+
 ## v2.0.0
 
 - **New:** Custom feed support — add/remove your own threat feed URLs via GUI or JSON config

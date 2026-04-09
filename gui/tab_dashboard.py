@@ -114,7 +114,7 @@ class DashboardTab:
         self.console.tag_config("info", foreground=MUTED)
 
         self._write(
-            "PhantomEye v2.0.0 ready.\nClick 'Update Feeds' to download the latest threat intelligence.\n", "info"
+            "PhantomEye v2.1.0 ready.\nClick 'Update Feeds' to download the latest threat intelligence.\n", "info"
         )
 
         # --- Keyboard shortcuts info ---
