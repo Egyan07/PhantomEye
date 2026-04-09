@@ -1,106 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0d1117"/>
-      <stop offset="50%" style="stop-color:#0f1923"/>
-      <stop offset="100%" style="stop-color:#161b22"/>
-    </linearGradient>
-    <linearGradient id="title-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#2ea043"/>
-      <stop offset="50%" style="stop-color:#3fb950"/>
-      <stop offset="100%" style="stop-color:#1f6feb"/>
-    </linearGradient>
-    <linearGradient id="shield-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" style="stop-color:#2ea043"/>
-      <stop offset="100%" style="stop-color:#1a7f37"/>
-    </linearGradient>
-    <linearGradient id="pulse-grad" x1="0%" y1="50%" x2="100%" y2="50%">
-      <stop offset="0%" style="stop-color:#0d1117;stop-opacity:0"/>
-      <stop offset="15%" style="stop-color:#2ea043;stop-opacity:0.15"/>
-      <stop offset="50%" style="stop-color:#2ea043;stop-opacity:0.08"/>
-      <stop offset="85%" style="stop-color:#1f6feb;stop-opacity:0.15"/>
-      <stop offset="100%" style="stop-color:#0d1117;stop-opacity:0"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-  </defs>
+  <rect width="1280" height="320" fill="#0d1117"/>
 
-  <!-- Background -->
-  <rect width="1280" height="320" fill="url(#bg)" rx="16"/>
-
-  <!-- Subtle grid pattern -->
-  <g opacity="0.03">
-    <line x1="0" y1="80" x2="1280" y2="80" stroke="#e6edf3" stroke-width="1"/>
-    <line x1="0" y1="160" x2="1280" y2="160" stroke="#e6edf3" stroke-width="1"/>
-    <line x1="0" y1="240" x2="1280" y2="240" stroke="#e6edf3" stroke-width="1"/>
-    <line x1="320" y1="0" x2="320" y2="320" stroke="#e6edf3" stroke-width="1"/>
-    <line x1="640" y1="0" x2="640" y2="320" stroke="#e6edf3" stroke-width="1"/>
-    <line x1="960" y1="0" x2="960" y2="320" stroke="#e6edf3" stroke-width="1"/>
+  <!-- Phantom silhouette — hooded figure with glowing eye -->
+  <g transform="translate(100, 25)">
+    <!-- Hood/cloak body -->
+    <path d="M100,20 C60,20 30,55 30,95 L30,140 C30,165 40,185 55,200 L25,260 L55,240 L75,260 L95,240 L115,260 L135,240 L155,260 L185,260 L155,200 C170,185 180,165 180,140 L180,95 C180,55 150,20 110,20 Z" fill="#161b22"/>
+    <!-- Hood inner shadow -->
+    <path d="M100,28 C65,28 38,58 38,95 L38,130 C38,135 40,140 42,145 L70,145 C75,120 85,100 105,100 C125,100 135,120 140,145 L168,145 C170,140 172,135 172,130 L172,95 C172,58 145,28 110,28 Z" fill="#0d1117"/>
+    <!-- Glowing eye — single, menacing -->
+    <circle cx="110" cy="115" r="8" fill="#2ea043" opacity="0.9"/>
+    <circle cx="110" cy="115" r="4" fill="#3fb950"/>
+    <circle cx="110" cy="115" r="14" fill="none" stroke="#2ea043" stroke-width="1" opacity="0.3"/>
   </g>
 
-  <!-- Horizontal pulse line -->
-  <rect x="0" y="155" width="1280" height="2" fill="url(#pulse-grad)" rx="1"/>
-
-  <!-- Shield icon (left of title) -->
-  <g transform="translate(390, 85)" filter="url(#glow)">
-    <!-- Shield outline -->
-    <path d="M24 4 L44 14 L44 30 Q44 48 24 56 Q4 48 4 30 L4 14 Z"
-          fill="none" stroke="url(#shield-grad)" stroke-width="2.5"/>
-    <!-- Radar sweep lines inside shield -->
-    <circle cx="24" cy="30" r="10" fill="none" stroke="#2ea043" stroke-width="1" opacity="0.5"/>
-    <circle cx="24" cy="30" r="5" fill="none" stroke="#2ea043" stroke-width="1" opacity="0.3"/>
-    <circle cx="24" cy="30" r="2" fill="#3fb950"/>
-    <!-- Sweep line -->
-    <line x1="24" y1="30" x2="34" y2="22" stroke="#3fb950" stroke-width="1.5" opacity="0.7"/>
-    <!-- Threat dot -->
-    <circle cx="30" cy="24" r="2.5" fill="#f85149" opacity="0.9"/>
-  </g>
-
-  <!-- Title -->
-  <text x="640" y="135" text-anchor="middle" fill="url(#title-grad)"
-        font-family="Consolas,'Courier New',monospace" font-size="68" font-weight="bold"
-        letter-spacing="3">PhantomEye</text>
+  <!-- PhantomEye text -->
+  <text x="340" y="150" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="80" font-weight="700" fill="#e6edf3" letter-spacing="-1">PhantomEye</text>
 
   <!-- Tagline -->
-  <text x="640" y="185" text-anchor="middle" fill="#8b949e"
-        font-family="Consolas,'Courier New',monospace" font-size="22"
-        letter-spacing="1">See the threats they can't.</text>
-
-  <!-- Stats bar -->
-  <g transform="translate(640, 230)" text-anchor="middle">
-    <text fill="#30363d" font-family="Consolas,'Courier New',monospace" font-size="13" letter-spacing="2">
-      <tspan fill="#3fb950">8 FEEDS</tspan>
-      <tspan fill="#30363d" dx="10">|</tspan>
-      <tspan fill="#58a6ff" dx="10">175+ TESTS</tspan>
-      <tspan fill="#30363d" dx="10">|</tspan>
-      <tspan fill="#3fb950" dx="10">ZERO DEPS</tspan>
-      <tspan fill="#30363d" dx="10">|</tspan>
-      <tspan fill="#58a6ff" dx="10">40,000+ IOCs</tspan>
-    </text>
-  </g>
-
-  <!-- Bottom attribution line -->
-  <text x="640" y="280" text-anchor="middle" fill="#21262d"
-        font-family="Consolas,'Courier New',monospace" font-size="12"
-        letter-spacing="4">FREE THREAT INTELLIGENCE PLATFORM FOR WINDOWS</text>
-
-  <!-- Corner accents -->
-  <line x1="20" y1="20" x2="60" y2="20" stroke="#2ea043" stroke-width="2" opacity="0.4"/>
-  <line x1="20" y1="20" x2="20" y2="60" stroke="#2ea043" stroke-width="2" opacity="0.4"/>
-  <line x1="1220" y1="20" x2="1260" y2="20" stroke="#1f6feb" stroke-width="2" opacity="0.4"/>
-  <line x1="1260" y1="20" x2="1260" y2="60" stroke="#1f6feb" stroke-width="2" opacity="0.4"/>
-  <line x1="20" y1="260" x2="20" y2="300" stroke="#2ea043" stroke-width="2" opacity="0.4"/>
-  <line x1="20" y1="300" x2="60" y2="300" stroke="#2ea043" stroke-width="2" opacity="0.4"/>
-  <line x1="1260" y1="260" x2="1260" y2="300" stroke="#1f6feb" stroke-width="2" opacity="0.4"/>
-  <line x1="1220" y1="300" x2="1260" y2="300" stroke="#1f6feb" stroke-width="2" opacity="0.4"/>
-
-  <!-- Scattered threat indicators (decorative dots) -->
-  <circle cx="180" cy="90" r="2" fill="#f85149" opacity="0.3"/>
-  <circle cx="1050" cy="110" r="1.5" fill="#f85149" opacity="0.25"/>
-  <circle cx="250" cy="250" r="1.5" fill="#f85149" opacity="0.2"/>
-  <circle cx="1100" cy="230" r="2" fill="#f85149" opacity="0.3"/>
-  <circle cx="150" cy="180" r="1" fill="#3fb950" opacity="0.2"/>
-  <circle cx="1130" cy="160" r="1" fill="#3fb950" opacity="0.2"/>
+  <text x="344" y="200" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="28" font-weight="400" fill="#8b949e" letter-spacing="4">See the threats they can't.</text>
 </svg>
