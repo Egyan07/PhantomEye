@@ -24,6 +24,7 @@ from gui.theme import (
     PANEL,
     make_button,
 )
+from gui.tooltip import Tooltip
 from scanner import analyse_email_headers
 
 
@@ -67,8 +68,13 @@ class EmailTab:
 
         btn_row = tk.Frame(t, bg=BG)
         btn_row.pack(fill=tk.X, padx=15, pady=(0, 6))
-        make_button(btn_row, "🔍  Analyse Headers", self._do_analysis, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "Clear", lambda: self.input_box.delete("1.0", tk.END), "#444").pack(side=tk.LEFT)
+        btn_analyse = make_button(btn_row, "🔍  Analyse Headers", self._do_analysis, ACCENT2)
+        btn_analyse.pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(btn_analyse, "Extract and check all IPs and domains from email headers")
+
+        btn_clear = make_button(btn_row, "Clear", lambda: self.input_box.delete("1.0", tk.END), "#444")
+        btn_clear.pack(side=tk.LEFT)
+        Tooltip(btn_clear, "Clear the email headers input box")
 
         # --- Results ---
         tk.Label(t, text="Analysis Results:", bg=BG, fg=MUTED, font=("Consolas", 9)).pack(anchor="w", padx=15)

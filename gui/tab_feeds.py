@@ -21,6 +21,7 @@ from gui.theme import (
     apply_treeview_style,
     make_button,
 )
+from gui.tooltip import Tooltip
 
 
 class FeedsTab:
@@ -34,8 +35,13 @@ class FeedsTab:
 
         btn_row = tk.Frame(t, bg=BG)
         btn_row.pack(fill=tk.X, padx=15, pady=8)
-        make_button(btn_row, "⬇  Update All Feeds", self.run_update_fn, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "🔄 Refresh", self.refresh, "#444").pack(side=tk.LEFT)
+        btn_update = make_button(btn_row, "⬇  Update All Feeds", self.run_update_fn, ACCENT2)
+        btn_update.pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(btn_update, "Download latest threat intelligence from all 8 feeds")
+
+        btn_refresh = make_button(btn_row, "🔄 Refresh", self.refresh, "#444")
+        btn_refresh.pack(side=tk.LEFT)
+        Tooltip(btn_refresh, "Reload feed status from database")
 
         cols = ("Feed Name", "IOC Count", "Last Updated", "Status")
         widths = (330, 100, 180, 80)

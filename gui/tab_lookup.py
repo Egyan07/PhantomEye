@@ -23,6 +23,7 @@ from gui.theme import (
     PANEL,
     make_button,
 )
+from gui.tooltip import Tooltip
 from lookup import format_lookup_result, lookup_ioc
 
 
@@ -66,7 +67,9 @@ class LookupTab:
             lambda _e: self.entry.delete(0, tk.END) if "e.g." in self.entry.get() else None,
         )
 
-        make_button(entry_frame, "Lookup", self._do_lookup, ACCENT2).pack(side=tk.LEFT)
+        btn_lookup = make_button(entry_frame, "Lookup", self._do_lookup, ACCENT2)
+        btn_lookup.pack(side=tk.LEFT)
+        Tooltip(btn_lookup, "Check this IP or domain against all threat feeds")
 
         # --- Results box ---
         self.result_box = scrolledtext.ScrolledText(

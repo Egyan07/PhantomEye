@@ -19,6 +19,7 @@ from gui.theme import (
     apply_treeview_style,
     make_button,
 )
+from gui.tooltip import Tooltip
 from monitor import check_connections, get_active_connections
 
 
@@ -36,7 +37,11 @@ class MonitorTab:
 
         self._start_btn = make_button(ctrl_frame, "  Start Monitoring", self._toggle_monitoring, ACCENT)
         self._start_btn.pack(side=tk.LEFT, padx=(0, 8))
-        make_button(ctrl_frame, "  Scan Now", self._scan_once, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(self._start_btn, "Poll active connections every 10 seconds")
+
+        btn_scan = make_button(ctrl_frame, "  Scan Now", self._scan_once, ACCENT2)
+        btn_scan.pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(btn_scan, "Check current connections against threat feeds")
 
         self._status_var = tk.StringVar(value="Monitoring: Stopped")
         tk.Label(

@@ -26,6 +26,7 @@ from gui.theme import (
     apply_treeview_style,
     make_button,
 )
+from gui.tooltip import Tooltip
 
 
 class AlertsTab:
@@ -38,10 +39,21 @@ class AlertsTab:
 
         btn_row = tk.Frame(t, bg=BG)
         btn_row.pack(fill=tk.X, padx=15, pady=8)
-        make_button(btn_row, "  Refresh", self.refresh, "#444").pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "  Export CSV", self._export_csv, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "  Export HTML", self._export_html, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "Clear All Alerts", self._clear_alerts, DANGER).pack(side=tk.LEFT)
+        btn_refresh = make_button(btn_row, "  Refresh", self.refresh, "#444")
+        btn_refresh.pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(btn_refresh, "Reload alert history from database")
+
+        btn_csv = make_button(btn_row, "  Export CSV", self._export_csv, ACCENT2)
+        btn_csv.pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(btn_csv, "Save all alerts as a CSV spreadsheet")
+
+        btn_html = make_button(btn_row, "  Export HTML", self._export_html, ACCENT2)
+        btn_html.pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(btn_html, "Generate a dark-themed HTML report")
+
+        btn_clear = make_button(btn_row, "Clear All Alerts", self._clear_alerts, DANGER)
+        btn_clear.pack(side=tk.LEFT)
+        Tooltip(btn_clear, "Permanently delete all alert history")
 
         # --- Treeview ---
         cols = ("Time", "Severity", "Type", "IOC", "Context")
