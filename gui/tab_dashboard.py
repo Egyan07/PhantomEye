@@ -17,7 +17,7 @@ import sqlite3
 import threading
 import tkinter as tk
 from datetime import datetime
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 from config import DB_PATH
 from feeds import check_stale_feeds, update_feeds
@@ -74,6 +74,25 @@ class DashboardTab:
         btn_refresh = make_button(btn_frame, "  Refresh", self.refresh, "#444")
         btn_refresh.pack(side=tk.LEFT, padx=4)
         Tooltip(btn_refresh, "Refresh dashboard statistics from database")
+
+        # --- Progress bar (hidden until a long operation runs) ---
+        self._progress_frame = tk.Frame(t, bg=BG)
+        self._progress_frame.pack(fill=tk.X, padx=15, pady=(0, 4))
+        self._progress_frame.pack_forget()  # hidden by default
+
+        self._progress_label = tk.Label(self._progress_frame, text="", bg=BG, fg=MUTED, font=("Consolas", 9))
+        self._progress_label.pack(anchor="w")
+
+        style = ttk.Style()
+        style.configure("green.Horizontal.TProgressbar", troughcolor=PANEL, background=ACCENT)
+        self._progress_bar = ttk.Progressbar(
+            self._progress_frame,
+            style="green.Horizontal.TProgressbar",
+            orient=tk.HORIZONTAL,
+            length=400,
+            mode="determinate",
+        )
+        self._progress_bar.pack(fill=tk.X, pady=(2, 0))
 
         # --- Feed health warning (hidden until a feed fails) ---
         self._health_var = tk.StringVar(value="")
@@ -173,14 +192,48 @@ class DashboardTab:
     def _run_update_feeds(self) -> None:
         def task():
             self._write("Starting feed update...", "info")
+            # Show progress bar
+            self.parent.after(0, self._show_progress, "Updating feeds...")
+
+            from config import THREAT_FEEDS
+            from custom_feeds import load_custom_feeds
+
+            all_feeds = {**THREAT_FEEDS, **load_custom_feeds()}
+            total_feeds = len(all_feeds)
+            current = [0]  # mutable counter for closure
+
+            def progress_callback(msg):
+                self._write(msg, "info")
+                if msg.strip().startswith(("Downloading:", "  ")):
+                    current[0] += 0.5  # half per download, half per parse
+                self.parent.after(
+                    0,
+                    self._update_progress,
+                    int((current[0] / total_feeds) * 100),
+                )
+
             try:
-                update_feeds(callback=lambda m: self._write(m, "info"))
+                update_feeds(callback=progress_callback)
                 self._write("Feed update complete!", "ok")
+                self.parent.after(0, self._hide_progress)
                 self.parent.after(0, self.refresh)
             except Exception as e:
                 self._write(f"Feed update error: {e}", "hit")
+                self.parent.after(0, self._hide_progress)
 
         threading.Thread(target=task, daemon=True).start()
+
+    def _show_progress(self, text: str) -> None:
+        self._progress_label.config(text=text)
+        self._progress_bar["value"] = 0
+        self._progress_frame.pack(fill=tk.X, padx=15, pady=(0, 4))
+
+    def _update_progress(self, value: int) -> None:
+        self._progress_bar["value"] = min(value, 100)
+        self._progress_label.config(text=f"Updating feeds... {min(value, 100)}%")
+
+    def _hide_progress(self) -> None:
+        self._progress_frame.pack_forget()
 
     def _run_firewall_scan(self) -> None:
         def task():
