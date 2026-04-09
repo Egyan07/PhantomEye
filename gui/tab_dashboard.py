@@ -98,6 +98,17 @@ class DashboardTab:
             "PhantomEye v1.4.0 ready.\nClick 'Update Feeds' to download the latest threat intelligence.\n", "info"
         )
 
+        # --- Keyboard shortcuts info ---
+        shortcuts_frame = tk.Frame(t, bg=PANEL)
+        shortcuts_frame.pack(fill=tk.X, padx=15, pady=(0, 8))
+        shortcuts_text = (
+            "Shortcuts:  F5 Refresh  |  Ctrl+U Update Feeds  |  Ctrl+F Firewall Scan  |  "
+            "Ctrl+D DNS Scan  |  Ctrl+1-6 Switch Tabs"
+        )
+        tk.Label(shortcuts_frame, text=shortcuts_text, bg=PANEL, fg=MUTED, font=("Consolas", 8), padx=8, pady=4).pack(
+            fill=tk.X
+        )
+
     # -----------------------------------------------------------------------
     #   Public
     # -----------------------------------------------------------------------

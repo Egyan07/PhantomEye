@@ -38,6 +38,18 @@ class PhantomEyeApp:
         # Populate stats on open
         self.root.after(300, self.dashboard_tab.refresh)
 
+        # Keyboard shortcuts
+        self.root.bind("<F5>", lambda _e: self.dashboard_tab.refresh())
+        self.root.bind("<Control-u>", lambda _e: self.dashboard_tab._run_update_feeds())
+        self.root.bind("<Control-f>", lambda _e: self.dashboard_tab._run_firewall_scan())
+        self.root.bind("<Control-d>", lambda _e: self.dashboard_tab._run_dns_scan())
+        self.root.bind("<Control-Key-1>", lambda _e: self.notebook.select(0))
+        self.root.bind("<Control-Key-2>", lambda _e: self.notebook.select(1))
+        self.root.bind("<Control-Key-3>", lambda _e: self.notebook.select(2))
+        self.root.bind("<Control-Key-4>", lambda _e: self.notebook.select(3))
+        self.root.bind("<Control-Key-5>", lambda _e: self.notebook.select(4))
+        self.root.bind("<Control-Key-6>", lambda _e: self.notebook.select(5))
+
     # -----------------------------------------------------------------------
     #   Header
     # -----------------------------------------------------------------------
