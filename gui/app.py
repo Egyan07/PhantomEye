@@ -26,7 +26,7 @@ class PhantomEyeApp:
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("👁  PhantomEye v1.5.0  |  Coded by Egyan  |  Red Parrot Accounting Ltd")
+        self.root.title("👁  PhantomEye v2.0.0  |  Coded by Egyan  |  Red Parrot Accounting Ltd")
         self.root.geometry("1050x700")
         self.root.configure(bg=BG)
         self.root.resizable(True, True)
@@ -133,7 +133,7 @@ class PhantomEyeApp:
     # -----------------------------------------------------------------------
 
     def _build_status_bar(self) -> None:
-        self._status_var = tk.StringVar(value="Ready — PhantomEye v1.5.0 | Red Parrot Accounting Ltd")
+        self._status_var = tk.StringVar(value="Ready — PhantomEye v2.0.0 | Red Parrot Accounting Ltd")
         tk.Label(
             self.root,
             textvariable=self._status_var,

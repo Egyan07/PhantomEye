@@ -2,6 +2,15 @@
 
 All notable changes to PhantomEye are documented here.
 
+## v2.0.0
+
+- **New:** Custom feed support — add/remove your own threat feed URLs via GUI or JSON config
+- **New:** Feed update progress bar on Dashboard
+- **New:** Database indexes on hot columns (ioc value, alert timestamp) for faster queries
+- **New:** 18 input validation security tests (path traversal, injection, oversized input)
+- **New:** GitHub Release automation workflow
+- **Improved:** 175 total tests (27 new: custom feeds, security validation)
+
 ## v1.5.0
 
 - **New:** Tooltips on all buttons across all 6 tabs

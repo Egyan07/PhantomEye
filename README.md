@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/Egyan07/PhantomEye/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Egyan07/PhantomEye/ci.yml?label=CI&logo=githubactions&logoColor=white" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-148%2B%20passing-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-175%2B%20passing-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/dependencies-zero-brightgreen" alt="Dependencies">
   <a href="https://github.com/Egyan07/PhantomEye/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Egyan07/PhantomEye" alt="License"></a>
@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <strong>8 threat feeds · 148+ tests · zero dependencies · 3 scan engines · IP geolocation · 40,000+ IOCs</strong>
+  <strong>8 threat feeds · 175+ tests · custom feeds · zero dependencies · 3 scan engines · IP geolocation · 40,000+ IOCs</strong>
 </p>
 
 <p align="center">
@@ -84,6 +84,7 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Multi-feed matching | Each IOC is checked against all 8 feeds; results show which feed flagged it |
 | Connection Monitor | Real-time netstat polling checks active TCP connections against threat feeds |
 | IP Geolocation | Lookup results show country, city, ISP, and AS number for malicious IPs |
+| Custom feeds | Add your own threat feed URLs — same parsing pipeline as built-in feeds |
 
 ### Monitoring
 
@@ -96,17 +97,19 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Alert history | Full timestamped log with search, filter, and CSV export |
 | Feed status dashboard | Per-feed IOC count, last-update timestamp, and health indicator |
 | HTML report export | Generate shareable dark-themed HTML reports from alert history |
+| Feed update progress | Visual progress bar during feed downloads |
 
 ### Developer Experience
 
 | Feature | Description |
 |---|---|
-| 148+ unit tests | Covers utils, feeds, lookup, alerts, database, scanners, geolocation, reports, and monitor |
+| 175+ unit tests | Covers utils, feeds, lookup, alerts, database, scanners, geolocation, reports, monitor, custom feeds, and security |
 | Zero runtime dependencies | Runs entirely on the Python standard library |
 | Health check CLI | `--check` validates config, DB connectivity, and feed freshness |
 | Keyboard shortcuts | F5, Ctrl+U/F/D, Ctrl+1-6 for quick navigation |
 | Tooltips | Hover tooltips on every action button |
 | CodeQL SAST | Automated security scanning on every push |
+| Security tests | 18 input validation tests covering path traversal, injection, and oversized input |
 | Clean architecture | 14 focused modules — no 1,000-line files |
 
 ---
@@ -178,6 +181,8 @@ pytest tests/ -v
 | Geolocation | `test_geolocation.py` | IP geolocation lookups, caching, error handling |
 | Reports | `test_reports.py` | HTML report generation and formatting |
 | Monitor | `test_monitor.py` | Netstat parsing, connection monitoring, IOC checks |
+| Custom Feeds | `test_custom_feeds.py` | Custom feed CRUD, validation, persistence (9 tests) |
+| Security | `test_security.py` | Path traversal, injection, oversized input validation (18 tests) |
 
 ---
 
@@ -198,7 +203,8 @@ pytest tests/ -v
         │            │   │ Email hdr │   │  Theme    │
         │ monitor.py │   │           │   │           │
         │ reports.py │   │geolocation│   │           │
-        │            │   │  .py      │   │           │
+        │custom_feeds│   │  .py      │   │           │
+        │  .py       │   │           │   │           │
         └─────┬──────┘   └─────┬─────┘   └─────┬─────┘
               │                │               │
         ┌─────▼──────────────▼───────────────▼──┐
@@ -247,6 +253,7 @@ Edit `config.py` to customise PhantomEye for your environment.
 | `SMTP_PORT` | `587` | SMTP port (TLS) |
 | `ALERT_HISTORY_LIMIT` | `500` | Maximum alerts stored in the database |
 | `FEED_UPDATE_HOURS` | `6` | Hours between scheduled feed updates |
+| Custom feeds | `custom_feeds.json` in LOG_DIR | Add your own threat feed URLs (managed via Feed Status tab) |
 
 ### Email password
 
