@@ -9,7 +9,7 @@
 import os
 
 # Tool version (referenced by main.py)
-VERSION = "1.2"
+VERSION = "1.3.0"
 
 # Admin machine name for msg.exe desktop alerts
 ADMIN_PC = "ADMINPC"

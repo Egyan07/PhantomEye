@@ -50,7 +50,7 @@ from logger import log
 from lookup import format_lookup_result, lookup_ioc
 from scanner import scan_dns_cache, scan_firewall_logs
 
-VERSION = "1.2"
+VERSION = "1.3.0"
 
 
 def _print_banner() -> None:

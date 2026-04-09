@@ -112,7 +112,7 @@ def download_feed(feed_name: str, feed_config: dict) -> str | None:
     url = feed_config["url"]
     filepath = os.path.join(FEEDS_DIR, f"{feed_name}.txt")
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "PhantomEye/1.2"})
+        req = urllib.request.Request(url, headers={"User-Agent": "PhantomEye/1.3.0"})
         with urllib.request.urlopen(req, timeout=30) as resp:
             content = resp.read().decode("utf-8", errors="ignore")
         with open(filepath, "w", encoding="utf-8") as f:
