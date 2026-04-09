@@ -21,16 +21,16 @@ import sqlite3
 import subprocess
 from datetime import datetime, timedelta
 
+from alerts import record_alert
 from config import DB_PATH, FIREWALL_LOG, FIREWALL_LOG_DAYS
 from logger import log
-from utils import is_valid_ip, is_valid_ipv4, is_private_ip, is_valid_domain, is_whitelisted
 from lookup import is_ioc_known
-from alerts import record_alert
-
+from utils import is_private_ip, is_valid_domain, is_valid_ip, is_whitelisted
 
 # ---------------------------------------------------------------------------
 #   Firewall log scanner
 # ---------------------------------------------------------------------------
+
 
 def scan_firewall_logs(callback=None) -> list[dict]:
     """
@@ -42,6 +42,7 @@ def scan_firewall_logs(callback=None) -> list[dict]:
     - ALLOW/DROP + malicious src_ip → inbound scan/attack from known bad actor (HIGH)
     """
     import os
+
     log.info("Scanning Windows Firewall logs...")
 
     if not os.path.exists(FIREWALL_LOG):
@@ -55,13 +56,13 @@ def scan_firewall_logs(callback=None) -> list[dict]:
             callback("WARNING: " + msg)
         return []
 
-    hits    = []
-    cutoff  = datetime.now() - timedelta(days=FIREWALL_LOG_DAYS)
+    hits = []
+    cutoff = datetime.now() - timedelta(days=FIREWALL_LOG_DAYS)
     checked = set()
 
     conn = sqlite3.connect(DB_PATH)
     try:
-        with open(FIREWALL_LOG, "r", encoding="utf-8", errors="ignore") as f:
+        with open(FIREWALL_LOG, encoding="utf-8", errors="ignore") as f:
             for line in f:
                 line = line.strip()
                 if line.startswith("#") or not line:
@@ -73,17 +74,15 @@ def scan_firewall_logs(callback=None) -> list[dict]:
                     continue
 
                 try:
-                    log_time = datetime.strptime(
-                        f"{parts[0]} {parts[1]}", "%Y-%m-%d %H:%M:%S"
-                    )
+                    log_time = datetime.strptime(f"{parts[0]} {parts[1]}", "%Y-%m-%d %H:%M:%S")
                     if log_time < cutoff:
                         continue
                 except ValueError:
                     continue
 
                 action = parts[2].upper() if len(parts) > 2 else ""
-                src_ip = parts[4]          if len(parts) > 4 else ""
-                dst_ip = parts[5]          if len(parts) > 5 else ""
+                src_ip = parts[4] if len(parts) > 4 else ""
+                dst_ip = parts[5] if len(parts) > 5 else ""
 
                 if action not in ("ALLOW", "DROP"):
                     continue
@@ -95,7 +94,7 @@ def scan_firewall_logs(callback=None) -> list[dict]:
                         checked.add(key)
                         if is_ioc_known(dst_ip, "ip"):
                             if action == "DROP":
-                                sev    = "CRITICAL"
+                                sev = "CRITICAL"
                                 a_type = "MALICIOUS IP — BLOCKED BY FIREWALL (infection indicator)"
                                 detail = (
                                     "A machine on this network attempted to connect to a known "
@@ -103,22 +102,31 @@ def scan_firewall_logs(callback=None) -> list[dict]:
                                     "indicates an infected machine."
                                 )
                             else:
-                                sev    = "CRITICAL"
+                                sev = "CRITICAL"
                                 a_type = "MALICIOUS IP IN FIREWALL LOG — ACTIVE OUTBOUND CONNECTION"
                                 detail = (
                                     "An outbound connection to a known malicious IP was allowed "
                                     "through the firewall. Investigate immediately."
                                 )
-                            context  = f"Firewall log — dst — action={action} at {parts[0]} {parts[1]}"
+                            context = f"Firewall log — dst — action={action} at {parts[0]} {parts[1]}"
                             recorded = record_alert(
-                                severity=sev, alert_type=a_type,
-                                ioc_value=dst_ip, ioc_type="ip",
-                                source_feed="firewall_scan", context=context,
-                                details=detail, conn=conn,
+                                severity=sev,
+                                alert_type=a_type,
+                                ioc_value=dst_ip,
+                                ioc_type="ip",
+                                source_feed="firewall_scan",
+                                context=context,
+                                details=detail,
+                                conn=conn,
                             )
                             conn.commit()
-                            hit = {"ioc": dst_ip, "type": "ip", "direction": "outbound",
-                                   "action": action, "context": context}
+                            hit = {
+                                "ioc": dst_ip,
+                                "type": "ip",
+                                "direction": "outbound",
+                                "action": action,
+                                "context": context,
+                            }
                             hits.append(hit)
                             msg = f"[HIT] {dst_ip} (dst) — {action} — {'(new alert)' if recorded else '(dedupe)'}"
                             log.warning(msg)
@@ -131,22 +139,31 @@ def scan_firewall_logs(callback=None) -> list[dict]:
                     if key not in checked:
                         checked.add(key)
                         if is_ioc_known(src_ip, "ip"):
-                            sev    = "HIGH"
+                            sev = "HIGH"
                             a_type = "MALICIOUS IP — INBOUND CONNECTION ATTEMPT"
                             detail = (
                                 "A connection attempt was received from a known malicious IP. "
                                 f"Action taken by firewall: {action}."
                             )
-                            context  = f"Firewall log — src — action={action} at {parts[0]} {parts[1]}"
+                            context = f"Firewall log — src — action={action} at {parts[0]} {parts[1]}"
                             recorded = record_alert(
-                                severity=sev, alert_type=a_type,
-                                ioc_value=src_ip, ioc_type="ip",
-                                source_feed="firewall_scan", context=context,
-                                details=detail, conn=conn,
+                                severity=sev,
+                                alert_type=a_type,
+                                ioc_value=src_ip,
+                                ioc_type="ip",
+                                source_feed="firewall_scan",
+                                context=context,
+                                details=detail,
+                                conn=conn,
                             )
                             conn.commit()
-                            hit = {"ioc": src_ip, "type": "ip", "direction": "inbound",
-                                   "action": action, "context": context}
+                            hit = {
+                                "ioc": src_ip,
+                                "type": "ip",
+                                "direction": "inbound",
+                                "action": action,
+                                "context": context,
+                            }
                             hits.append(hit)
                             msg = f"[HIT] {src_ip} (src) — {action} — {'(new alert)' if recorded else '(dedupe)'}"
                             log.warning(msg)
@@ -166,10 +183,7 @@ def scan_firewall_logs(callback=None) -> list[dict]:
         conn.close()
 
     unique_ips = len({k[1] for k in checked})
-    log.info(
-        "Firewall scan complete. %d unique IPs checked, %d malicious hits.",
-        unique_ips, len(hits)
-    )
+    log.info("Firewall scan complete. %d unique IPs checked, %d malicious hits.", unique_ips, len(hits))
     if callback:
         callback(f"Firewall scan: {unique_ips} IPs checked, {len(hits)} malicious hits")
     return hits
@@ -178,6 +192,7 @@ def scan_firewall_logs(callback=None) -> list[dict]:
 # ---------------------------------------------------------------------------
 #   DNS cache scanner
 # ---------------------------------------------------------------------------
+
 
 def scan_dns_cache(callback=None) -> list[dict]:
     """
@@ -188,22 +203,16 @@ def scan_dns_cache(callback=None) -> list[dict]:
     hits = []
 
     try:
-        ps_cmd = (
-            "Get-DnsClientCache | "
-            "Select-Object -ExpandProperty Entry | "
-            "Sort-Object -Unique"
-        )
+        ps_cmd = "Get-DnsClientCache | Select-Object -ExpandProperty Entry | Sort-Object -Unique"
         proc_result = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
-            capture_output=True, text=True, timeout=30
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if proc_result.returncode != 0 and proc_result.stderr:
             log.warning("PowerShell DNS cache stderr: %s", proc_result.stderr.strip())
-        domains = [
-            d.strip().lower()
-            for d in proc_result.stdout.splitlines()
-            if d.strip()
-        ]
+        domains = [d.strip().lower() for d in proc_result.stdout.splitlines() if d.strip()]
     except Exception as e:
         log.error("Could not read DNS cache: %s", e)
         if callback:
@@ -211,7 +220,7 @@ def scan_dns_cache(callback=None) -> list[dict]:
         return []
 
     checked = set()
-    conn    = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH)
     try:
         for domain in domains:
             if not is_valid_domain(domain) or domain in checked:
@@ -224,12 +233,14 @@ def scan_dns_cache(callback=None) -> list[dict]:
             if not is_ioc_known(domain, "domain"):
                 continue
 
-            context  = "Found in Windows DNS resolver cache"
+            context = "Found in Windows DNS resolver cache"
             recorded = record_alert(
                 severity="CRITICAL",
                 alert_type="MALICIOUS DOMAIN IN DNS CACHE",
-                ioc_value=domain, ioc_type="domain",
-                source_feed="dns_scan", context=context,
+                ioc_value=domain,
+                ioc_type="domain",
+                source_feed="dns_scan",
+                context=context,
                 details="Machine recently resolved this known malicious domain.",
                 conn=conn,
             )
@@ -246,10 +257,7 @@ def scan_dns_cache(callback=None) -> list[dict]:
     finally:
         conn.close()
 
-    log.info(
-        "DNS scan complete. %d domains checked, %d hits.",
-        len(checked), len(hits)
-    )
+    log.info("DNS scan complete. %d domains checked, %d hits.", len(checked), len(hits))
     if callback:
         callback(f"DNS scan: {len(checked)} domains checked, {len(hits)} malicious hits")
     return hits
@@ -258,6 +266,7 @@ def scan_dns_cache(callback=None) -> list[dict]:
 # ---------------------------------------------------------------------------
 #   Email header analyser
 # ---------------------------------------------------------------------------
+
 
 def analyse_email_headers(header_text: str, callback=None) -> str:
     """
@@ -268,14 +277,12 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
          Previously any line containing '[' was also searched, causing false
          positives from Message-ID headers and other bracketed fields.
     """
-    lines          = header_text.splitlines()
-    ip_pattern     = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
-    domain_pattern = re.compile(
-        r"from\s+([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})", re.IGNORECASE
-    )
+    lines = header_text.splitlines()
+    ip_pattern = re.compile(r"\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b")
+    domain_pattern = re.compile(r"from\s+([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})", re.IGNORECASE)
 
     # --- Extract From and Reply-To domains ---
-    from_domain  = ""
+    from_domain = ""
     reply_domain = ""
     for line in lines:
         ll = line.lower()
@@ -320,7 +327,7 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
     if mismatch_alert:
         report.append("  WARNING: From != Reply-To — possible phishing redirect!")
 
-    unique_ips     = list(dict.fromkeys(received_ips))
+    unique_ips = list(dict.fromkeys(received_ips))
     unique_domains = list(dict.fromkeys(received_domains))[:50]  # raised from 20 to 50
 
     report.append(f"  IPs found     : {len(unique_ips)}")
@@ -335,8 +342,13 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
             if hit:
                 threat_count += 1
                 record_alert(
-                    "CRITICAL", "MALICIOUS IP IN EMAIL HEADER",
-                    ip, "ip", "email_analysis", "Email header analysis", "",
+                    "CRITICAL",
+                    "MALICIOUS IP IN EMAIL HEADER",
+                    ip,
+                    "ip",
+                    "email_analysis",
+                    "Email header analysis",
+                    "",
                     conn=conn,
                 )
                 conn.commit()
@@ -351,8 +363,13 @@ def analyse_email_headers(header_text: str, callback=None) -> str:
             if hit:
                 threat_count += 1
                 record_alert(
-                    "CRITICAL", "MALICIOUS DOMAIN IN EMAIL HEADER",
-                    domain, "domain", "email_analysis", "Email header analysis", "",
+                    "CRITICAL",
+                    "MALICIOUS DOMAIN IN EMAIL HEADER",
+                    domain,
+                    "domain",
+                    "email_analysis",
+                    "Email header analysis",
+                    "",
                     conn=conn,
                 )
                 conn.commit()

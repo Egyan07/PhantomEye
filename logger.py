@@ -6,25 +6,20 @@
 #   Import `log` from this module everywhere.
 # =============================================================================
 
+import logging
 import os
 import sys
-import logging
 from logging.handlers import RotatingFileHandler
 
-from config import LOG_DIR, FEEDS_DIR, LOG_FILE
+from config import FEEDS_DIR, LOG_DIR, LOG_FILE
 
 # Ensure directories exist before attaching file handler
-os.makedirs(LOG_DIR,   exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(FEEDS_DIR, exist_ok=True)
 
-_fmt = logging.Formatter(
-    "[%(asctime)s] %(levelname)s — %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
+_fmt = logging.Formatter("[%(asctime)s] %(levelname)s — %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
-_file_handler = RotatingFileHandler(
-    LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
-)
+_file_handler = RotatingFileHandler(LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8")
 _file_handler.setFormatter(_fmt)
 
 _console_handler = logging.StreamHandler(sys.stdout)

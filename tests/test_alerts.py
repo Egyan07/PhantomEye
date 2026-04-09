@@ -7,28 +7,32 @@
 #   Run with: pytest tests/test_alerts.py -v
 # =============================================================================
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import sqlite3
-import pytest
-from unittest.mock import patch
 from datetime import datetime, timedelta
+from unittest.mock import patch
+
+import pytest
 
 
 @pytest.fixture(autouse=True)
 def mock_env(tmp_path):
-    with patch("config.LOG_DIR",             str(tmp_path / "logs")), \
-         patch("config.FEEDS_DIR",           str(tmp_path / "feeds")), \
-         patch("config.LOG_FILE",            str(tmp_path / "phantom_eye.log")), \
-         patch("config.DB_PATH",             ":memory:"), \
-         patch("config.ADMIN_PC",            "TESTPC"), \
-         patch("config.ALERT_DEDUPE_HOURS",  24), \
-         patch("config.EMAIL_ENABLED",       False), \
-         patch("config.WHITELIST_IPS",       []), \
-         patch("config.WHITELIST_DOMAINS",   []):
-        os.makedirs(str(tmp_path / "logs"),  exist_ok=True)
+    with (
+        patch("config.LOG_DIR", str(tmp_path / "logs")),
+        patch("config.FEEDS_DIR", str(tmp_path / "feeds")),
+        patch("config.LOG_FILE", str(tmp_path / "phantom_eye.log")),
+        patch("config.DB_PATH", ":memory:"),
+        patch("config.ADMIN_PC", "TESTPC"),
+        patch("config.ALERT_DEDUPE_HOURS", 24),
+        patch("config.EMAIL_ENABLED", False),
+        patch("config.WHITELIST_IPS", []),
+        patch("config.WHITELIST_DOMAINS", []),
+    ):
+        os.makedirs(str(tmp_path / "logs"), exist_ok=True)
         os.makedirs(str(tmp_path / "feeds"), exist_ok=True)
         yield
 
@@ -67,7 +71,7 @@ class TestIsDuplicate:
         conn.execute(
             "INSERT INTO alerts (timestamp, severity, alert_type, ioc_value, "
             "ioc_type, source_feed, context, details) VALUES (?,?,?,?,?,?,?,?)",
-            (now, "CRITICAL", "TEST", "1.2.3.4", "ip", "test", "", "")
+            (now, "CRITICAL", "TEST", "1.2.3.4", "ip", "test", "", ""),
         )
         conn.commit()
         assert _is_duplicate("1.2.3.4", conn)
@@ -78,7 +82,7 @@ class TestIsDuplicate:
         conn.execute(
             "INSERT INTO alerts (timestamp, severity, alert_type, ioc_value, "
             "ioc_type, source_feed, context, details) VALUES (?,?,?,?,?,?,?,?)",
-            (old_time, "CRITICAL", "TEST", "1.2.3.4", "ip", "test", "", "")
+            (old_time, "CRITICAL", "TEST", "1.2.3.4", "ip", "test", "", ""),
         )
         conn.commit()
         assert not _is_duplicate("1.2.3.4", conn)
@@ -89,7 +93,7 @@ class TestIsDuplicate:
         conn.execute(
             "INSERT INTO alerts (timestamp, severity, alert_type, ioc_value, "
             "ioc_type, source_feed, context, details) VALUES (?,?,?,?,?,?,?,?)",
-            (now, "CRITICAL", "TEST", "9.9.9.9", "ip", "test", "", "")
+            (now, "CRITICAL", "TEST", "9.9.9.9", "ip", "test", "", ""),
         )
         conn.commit()
         assert not _is_duplicate("1.2.3.4", conn)
@@ -98,11 +102,15 @@ class TestIsDuplicate:
 class TestRecordAlert:
     def test_records_new_alert(self):
         conn = _make_alerts_table()
-        with patch("subprocess.run"), \
-             patch("alerts.DB_PATH", ":memory:"):
+        with patch("subprocess.run"), patch("alerts.DB_PATH", ":memory:"):
             result = record_alert(
-                "CRITICAL", "TEST ALERT", "1.2.3.4", "ip",
-                "test_feed", "test context", "test details",
+                "CRITICAL",
+                "TEST ALERT",
+                "1.2.3.4",
+                "ip",
+                "test_feed",
+                "test context",
+                "test details",
                 conn=conn,
             )
         assert result is True
@@ -111,16 +119,27 @@ class TestRecordAlert:
 
     def test_deduplication_suppresses_second_alert(self):
         conn = _make_alerts_table()
-        with patch("subprocess.run"), \
-             patch("alerts.DB_PATH", ":memory:"):
+        with patch("subprocess.run"), patch("alerts.DB_PATH", ":memory:"):
             record_alert(
-                "CRITICAL", "TEST ALERT", "1.2.3.4", "ip",
-                "test_feed", "", "", conn=conn,
+                "CRITICAL",
+                "TEST ALERT",
+                "1.2.3.4",
+                "ip",
+                "test_feed",
+                "",
+                "",
+                conn=conn,
             )
             conn.commit()
             result = record_alert(
-                "CRITICAL", "TEST ALERT", "1.2.3.4", "ip",
-                "test_feed", "", "", conn=conn,
+                "CRITICAL",
+                "TEST ALERT",
+                "1.2.3.4",
+                "ip",
+                "test_feed",
+                "",
+                "",
+                conn=conn,
             )
         assert result is False
         cur = conn.execute("SELECT COUNT(*) FROM alerts WHERE ioc_value='1.2.3.4'")
@@ -128,11 +147,19 @@ class TestRecordAlert:
 
     def test_msg_failure_does_not_raise(self):
         conn = _make_alerts_table()
-        with patch("subprocess.run", side_effect=FileNotFoundError("msg not found")), \
-             patch("alerts.DB_PATH", ":memory:"):
+        with (
+            patch("subprocess.run", side_effect=FileNotFoundError("msg not found")),
+            patch("alerts.DB_PATH", ":memory:"),
+        ):
             # Should not raise even if msg.exe is missing
             result = record_alert(
-                "CRITICAL", "TEST", "5.5.5.5", "ip",
-                "test", "", "", conn=conn,
+                "CRITICAL",
+                "TEST",
+                "5.5.5.5",
+                "ip",
+                "test",
+                "",
+                "",
+                conn=conn,
             )
         assert result is True

@@ -18,31 +18,36 @@
 # =============================================================================
 
 import os
-import ssl
-import sqlite3
 import smtplib
+import sqlite3
+import ssl
 import subprocess
 from datetime import datetime, timedelta
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from config import (
-    DB_PATH, ADMIN_PC, ALERT_DEDUPE_HOURS,
-    EMAIL_ENABLED, EMAIL_FROM, EMAIL_TO,
-    EMAIL_SMTP_SERVER, EMAIL_SMTP_PORT,
+    ADMIN_PC,
+    ALERT_DEDUPE_HOURS,
+    DB_PATH,
+    EMAIL_ENABLED,
+    EMAIL_FROM,
+    EMAIL_SMTP_PORT,
+    EMAIL_SMTP_SERVER,
+    EMAIL_TO,
 )
 from logger import log
 
 
 def record_alert(
-    severity:    str,
-    alert_type:  str,
-    ioc_value:   str,
-    ioc_type:    str,
+    severity: str,
+    alert_type: str,
+    ioc_value: str,
+    ioc_type: str,
     source_feed: str,
-    context:     str,
-    details:     str,
-    conn:        sqlite3.Connection = None,
+    context: str,
+    details: str,
+    conn: sqlite3.Connection = None,
 ) -> bool:
     """
     Dispatch an alert: save to DB, send msg.exe notification, optionally email.
@@ -64,13 +69,15 @@ def record_alert(
             log.debug("Alert suppressed (dedupe): %s", ioc_value)
             return False
 
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO alerts
                 (timestamp, severity, alert_type, ioc_value, ioc_type,
                  source_feed, context, details)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (now, severity, alert_type, ioc_value, ioc_type,
-              source_feed, context, details))
+        """,
+            (now, severity, alert_type, ioc_value, ioc_type, source_feed, context, details),
+        )
 
         if _own_conn:
             conn.commit()
@@ -103,21 +110,23 @@ def record_alert(
 #   Private helpers
 # ---------------------------------------------------------------------------
 
+
 def _is_duplicate(ioc_value: str, conn: sqlite3.Connection) -> bool:
     """
     Return True if an alert for this IOC was already recorded within
     ALERT_DEDUPE_HOURS hours.  Uses the caller's connection so the check
     is in the same transaction as the subsequent INSERT.
     """
-    cutoff = (
-        datetime.now() - timedelta(hours=ALERT_DEDUPE_HOURS)
-    ).strftime("%Y-%m-%d %H:%M:%S")
+    cutoff = (datetime.now() - timedelta(hours=ALERT_DEDUPE_HOURS)).strftime("%Y-%m-%d %H:%M:%S")
     try:
         cur = conn.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             SELECT COUNT(*) FROM alerts
             WHERE ioc_value = ? AND timestamp >= ?
-        """, (ioc_value, cutoff))
+        """,
+            (ioc_value, cutoff),
+        )
         return cur.fetchone()[0] > 0
     except Exception as e:
         log.warning("Deduplication check failed for %s: %s", ioc_value, e)
@@ -128,20 +137,17 @@ def _get_email_password() -> str:
     """Read the email password from PHANTOMEYE_EMAIL_PASSWORD env var."""
     pwd = os.environ.get("PHANTOMEYE_EMAIL_PASSWORD", "")
     if not pwd:
-        log.warning(
-            "EMAIL_ENABLED is True but PHANTOMEYE_EMAIL_PASSWORD env var "
-            "is not set. Email alert skipped."
-        )
+        log.warning("EMAIL_ENABLED is True but PHANTOMEYE_EMAIL_PASSWORD env var is not set. Email alert skipped.")
     return pwd
 
 
 def _send_email(
-    severity:   str,
+    severity: str,
     alert_type: str,
-    ioc_value:  str,
-    context:    str,
-    details:    str,
-    timestamp:  str,
+    ioc_value: str,
+    context: str,
+    details: str,
+    timestamp: str,
 ) -> None:
     password = _get_email_password()
     if not password:
@@ -157,9 +163,9 @@ def _send_email(
         f"Details    : {details}\n"
         f"Time       : {timestamp}\n"
     )
-    msg            = MIMEMultipart()
-    msg["From"]    = EMAIL_FROM
-    msg["To"]      = EMAIL_TO
+    msg = MIMEMultipart()
+    msg["From"] = EMAIL_FROM
+    msg["To"] = EMAIL_TO
     msg["Subject"] = f"[PhantomEye {severity}] {alert_type}: {ioc_value}"
     msg.attach(MIMEText(body, "plain"))
 

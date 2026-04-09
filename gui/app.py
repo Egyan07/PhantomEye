@@ -9,12 +9,12 @@
 import tkinter as tk
 from tkinter import ttk
 
-from gui.theme import BG, FG, PANEL, ACCENT, ACCENT2, MUTED
+from gui.tab_alerts import AlertsTab
 from gui.tab_dashboard import DashboardTab
-from gui.tab_lookup    import LookupTab
-from gui.tab_email     import EmailTab
-from gui.tab_alerts    import AlertsTab
-from gui.tab_feeds     import FeedsTab
+from gui.tab_email import EmailTab
+from gui.tab_feeds import FeedsTab
+from gui.tab_lookup import LookupTab
+from gui.theme import ACCENT, ACCENT2, BG, FG, MUTED, PANEL
 
 
 class PhantomEyeApp:
@@ -25,9 +25,7 @@ class PhantomEyeApp:
 
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title(
-            "👁  PhantomEye v1.2  |  Coded by Egyan  |  Red Parrot Accounting Ltd"
-        )
+        self.root.title("👁  PhantomEye v1.2  |  Coded by Egyan  |  Red Parrot Accounting Ltd")
         self.root.geometry("1050x700")
         self.root.configure(bg=BG)
         self.root.resizable(True, True)
@@ -49,16 +47,19 @@ class PhantomEyeApp:
         hdr.pack_propagate(False)
 
         tk.Label(
-            hdr, text="👁  PhantomEye",
+            hdr,
+            text="👁  PhantomEye",
             font=("Consolas", 18, "bold"),
-            bg=PANEL, fg=ACCENT,
+            bg=PANEL,
+            fg=ACCENT,
         ).pack(side=tk.LEFT, padx=18, pady=10)
 
         tk.Label(
             hdr,
             text="Threat Intelligence Platform  |  Coded by Egyan  |  Red Parrot Accounting Ltd",
             font=("Consolas", 9),
-            bg=PANEL, fg=MUTED,
+            bg=PANEL,
+            fg=MUTED,
         ).pack(side=tk.LEFT, pady=10)
 
     # -----------------------------------------------------------------------
@@ -68,11 +69,13 @@ class PhantomEyeApp:
     def _build_tabs(self) -> None:
         style = ttk.Style()
         style.theme_use("default")
-        style.configure("TNotebook",     background=BG,    borderwidth=0)
+        style.configure("TNotebook", background=BG, borderwidth=0)
         style.configure(
             "TNotebook.Tab",
-            background=PANEL, foreground=FG,
-            font=("Consolas", 10), padding=[14, 6],
+            background=PANEL,
+            foreground=FG,
+            font=("Consolas", 10),
+            padding=[14, 6],
         )
         style.map(
             "TNotebook.Tab",
@@ -85,23 +88,23 @@ class PhantomEyeApp:
 
         # Create tab frames
         f_dashboard = tk.Frame(self.notebook, bg=BG)
-        f_lookup    = tk.Frame(self.notebook, bg=BG)
-        f_email     = tk.Frame(self.notebook, bg=BG)
-        f_alerts    = tk.Frame(self.notebook, bg=BG)
-        f_feeds     = tk.Frame(self.notebook, bg=BG)
+        f_lookup = tk.Frame(self.notebook, bg=BG)
+        f_email = tk.Frame(self.notebook, bg=BG)
+        f_alerts = tk.Frame(self.notebook, bg=BG)
+        f_feeds = tk.Frame(self.notebook, bg=BG)
 
         self.notebook.add(f_dashboard, text=" Dashboard ")
-        self.notebook.add(f_lookup,    text=" IP / Domain Lookup ")
-        self.notebook.add(f_email,     text=" Email Header Analyser ")
-        self.notebook.add(f_alerts,    text=" Alert History ")
-        self.notebook.add(f_feeds,     text=" Feed Status ")
+        self.notebook.add(f_lookup, text=" IP / Domain Lookup ")
+        self.notebook.add(f_email, text=" Email Header Analyser ")
+        self.notebook.add(f_alerts, text=" Alert History ")
+        self.notebook.add(f_feeds, text=" Feed Status ")
 
         # Instantiate tab controllers
         self.dashboard_tab = DashboardTab(f_dashboard)
-        self.lookup_tab    = LookupTab(f_lookup,    self.set_status)
-        self.email_tab     = EmailTab(f_email,      self.set_status)
-        self.alerts_tab    = AlertsTab(f_alerts)
-        self.feeds_tab     = FeedsTab(
+        self.lookup_tab = LookupTab(f_lookup, self.set_status)
+        self.email_tab = EmailTab(f_email, self.set_status)
+        self.alerts_tab = AlertsTab(f_alerts)
+        self.feeds_tab = FeedsTab(
             f_feeds,
             run_update_fn=self.dashboard_tab._run_update_feeds,
         )
@@ -114,15 +117,15 @@ class PhantomEyeApp:
     # -----------------------------------------------------------------------
 
     def _build_status_bar(self) -> None:
-        self._status_var = tk.StringVar(
-            value="Ready — PhantomEye v1.2 | Red Parrot Accounting Ltd"
-        )
+        self._status_var = tk.StringVar(value="Ready — PhantomEye v1.2 | Red Parrot Accounting Ltd")
         tk.Label(
             self.root,
             textvariable=self._status_var,
-            bg=PANEL, fg=MUTED,
+            bg=PANEL,
+            fg=MUTED,
             font=("Consolas", 9),
-            anchor="w", padx=10,
+            anchor="w",
+            padx=10,
         ).pack(side=tk.BOTTOM, fill=tk.X)
 
     def set_status(self, msg: str) -> None:
@@ -135,7 +138,7 @@ class PhantomEyeApp:
 
     def _on_tab_change(self, _event: tk.Event) -> None:
         selected = self.notebook.index(self.notebook.select())
-        if selected == 3:   # Alert History
+        if selected == 3:  # Alert History
             self.alerts_tab.refresh()
-        elif selected == 4: # Feed Status
+        elif selected == 4:  # Feed Status
             self.feeds_tab.refresh()

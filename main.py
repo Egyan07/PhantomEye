@@ -39,22 +39,23 @@
 # =============================================================================
 
 import argparse
+import contextlib
 import sys
 import traceback
 
-from logger   import log
-from config   import LOG_FILE
+from alerts import record_alert
 from database import init_database
-from feeds    import update_feeds, load_ioc_cache
-from scanner  import scan_firewall_logs, scan_dns_cache
-from lookup   import lookup_ioc, format_lookup_result
-from alerts   import record_alert
+from feeds import load_ioc_cache, update_feeds
+from logger import log
+from lookup import format_lookup_result, lookup_ioc
+from scanner import scan_dns_cache, scan_firewall_logs
 
 VERSION = "1.2"
 
 
 def _print_banner() -> None:
     from datetime import datetime
+
     print()
     print("=" * 65)
     print(f"  PhantomEye v{VERSION}  —  Threat Intelligence Platform")
@@ -67,35 +68,18 @@ def _print_banner() -> None:
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="main",
-        description=f"PhantomEye v{VERSION} — Threat Intelligence Platform\n"
-                    "Coded by Egyan | Red Parrot Accounting Ltd",
+        description=f"PhantomEye v{VERSION} — Threat Intelligence Platform\nCoded by Egyan | Red Parrot Accounting Ltd",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--gui", action="store_true", help="Launch the graphical dashboard")
+    group.add_argument("--update-feeds", action="store_true", help="Download / refresh all threat feeds")
+    group.add_argument("--scan", action="store_true", help="Run firewall + DNS scan (headless, for scheduled task)")
     group.add_argument(
-        "--gui", action="store_true",
-        help="Launch the graphical dashboard"
+        "--lookup", metavar="IP_OR_DOMAIN", help="Check a single IP or domain against the threat database"
     )
-    group.add_argument(
-        "--update-feeds", action="store_true",
-        help="Download / refresh all threat feeds"
-    )
-    group.add_argument(
-        "--scan", action="store_true",
-        help="Run firewall + DNS scan (headless, for scheduled task)"
-    )
-    group.add_argument(
-        "--lookup", metavar="IP_OR_DOMAIN",
-        help="Check a single IP or domain against the threat database"
-    )
-    group.add_argument(
-        "--version", action="store_true",
-        help="Print version and exit"
-    )
-    group.add_argument(
-        "--check", action="store_true",
-        help="Validate config, DB connectivity, and feed health"
-    )
+    group.add_argument("--version", action="store_true", help="Print version and exit")
+    group.add_argument("--check", action="store_true", help="Validate config, DB connectivity, and feed health")
     return parser
 
 
@@ -108,7 +92,7 @@ def main() -> None:
         return
 
     parser = _build_arg_parser()
-    args   = parser.parse_args()
+    args = parser.parse_args()
 
     if args.version:
         print(f"PhantomEye v{VERSION}")
@@ -132,9 +116,9 @@ def main() -> None:
     elif args.scan:
         log.info("Mode: --scan")
         load_ioc_cache()
-        fw_hits  = scan_firewall_logs()
+        fw_hits = scan_firewall_logs()
         dns_hits = scan_dns_cache()
-        total    = len(fw_hits) + len(dns_hits)
+        total = len(fw_hits) + len(dns_hits)
         print(f"\nScan complete. {total} malicious IOC(s) detected.")
         if total > 0:
             print("Check the Alert History tab or database for details.")
@@ -151,8 +135,9 @@ def _run_check() -> None:
     Exits with code 0 (all OK) or 1 (issues found).
     """
     import os
-    from config import DB_PATH, LOG_DIR, FEEDS_DIR, FIREWALL_LOG, THREAT_FEEDS
-    from feeds  import check_stale_feeds
+
+    from config import DB_PATH, FEEDS_DIR, FIREWALL_LOG, LOG_DIR, THREAT_FEEDS
+    from feeds import check_stale_feeds
 
     issues = []
     print("PhantomEye Health Check")
@@ -193,6 +178,7 @@ def _run_check() -> None:
         print(f"  [OK] All {len(THREAT_FEEDS)} feeds are up-to-date")
 
     from feeds import feeds_loaded, get_last_feed_time
+
     total = feeds_loaded()
     print(f"  [OK] IOCs in database: {total:,}")
     print(f"  [OK] Last feed update: {get_last_feed_time()}")
@@ -211,6 +197,7 @@ def _run_check() -> None:
 def _launch_gui() -> None:
     """Launch GUI after initialising DB and cache (called when no CLI args)."""
     import tkinter as tk
+
     from gui.app import PhantomEyeApp
 
     init_database()
@@ -227,6 +214,7 @@ def _launch_gui_no_reinit() -> None:
     by main() — avoids the double-init that existed in v1.0/v1.1.
     """
     import tkinter as tk
+
     from gui.app import PhantomEyeApp
 
     root = tk.Tk()
@@ -242,11 +230,14 @@ if __name__ == "__main__":
     except Exception as e:
         log.critical("PhantomEye crashed: %s", e)
         log.critical(traceback.format_exc())
-        try:
+        with contextlib.suppress(Exception):
             record_alert(
-                "CRITICAL", "PHANTOMEYE CRASHED", "N/A", "system",
-                "internal", "main.py", str(e),
+                "CRITICAL",
+                "PHANTOMEYE CRASHED",
+                "N/A",
+                "system",
+                "internal",
+                "main.py",
+                str(e),
             )
-        except Exception:
-            pass
         sys.exit(1)

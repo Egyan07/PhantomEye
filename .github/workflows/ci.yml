@@ -30,3 +30,19 @@ jobs:
 
       - name: Verify no syntax errors in all modules
         run: python -m py_compile alerts.py config.py database.py feeds.py logger.py lookup.py main.py scanner.py utils.py gui/app.py gui/tab_alerts.py gui/tab_dashboard.py gui/tab_email.py gui/tab_feeds.py gui/tab_lookup.py gui/theme.py
+
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Ruff
+        run: pip install ruff
+      - name: Ruff check
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .

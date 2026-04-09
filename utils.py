@@ -16,12 +16,12 @@ import ipaddress
 import re
 from urllib.parse import urlparse
 
-from config import WHITELIST_IPS, WHITELIST_DOMAINS
-
+from config import WHITELIST_DOMAINS, WHITELIST_IPS
 
 # ---------------------------------------------------------------------------
 #   IP helpers  (stdlib ipaddress — correct, fast, no regex needed)
 # ---------------------------------------------------------------------------
+
 
 def is_valid_ipv4(ip: str) -> bool:
     """Return True for a syntactically valid IPv4 address."""
@@ -73,6 +73,7 @@ def is_private_ip(ip: str) -> bool:
 #   Domain helpers
 # ---------------------------------------------------------------------------
 
+
 def is_valid_domain(domain: str) -> bool:
     """
     Return True for a syntactically plausible domain name.
@@ -90,9 +91,7 @@ def is_valid_domain(domain: str) -> bool:
     if len(tld) < 2:
         return False
     # No label longer than 63 chars (RFC 1035), no empty labels
-    if any(len(lbl) > 63 or len(lbl) == 0 for lbl in labels):
-        return False
-    return True
+    return not any(len(lbl) > 63 or len(lbl) == 0 for lbl in labels)
 
 
 def extract_domain_from_url(url: str) -> str:
@@ -107,8 +106,8 @@ def extract_domain_from_url(url: str) -> str:
         if not url.startswith("http"):
             url = "http://" + url
         parsed = urlparse(url)
-        host   = (parsed.hostname or "").lower()
-        host   = re.sub(r"^www\.", "", host)
+        host = (parsed.hostname or "").lower()
+        host = re.sub(r"^www\.", "", host)
         return host
     except Exception:
         return ""
@@ -117,6 +116,7 @@ def extract_domain_from_url(url: str) -> str:
 # ---------------------------------------------------------------------------
 #   Whitelist
 # ---------------------------------------------------------------------------
+
 
 def is_whitelisted(value: str, ioc_type: str) -> bool:
     """Return True if an IP or domain should be ignored."""

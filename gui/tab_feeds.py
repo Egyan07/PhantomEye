@@ -12,14 +12,20 @@ from tkinter import ttk
 
 from config import DB_PATH, THREAT_FEEDS
 from gui.theme import (
-    BG, FG, PANEL, ACCENT, ACCENT2, WARN, DANGER, MUTED,
-    make_button, apply_treeview_style,
+    ACCENT,
+    ACCENT2,
+    BG,
+    DANGER,
+    MUTED,
+    WARN,
+    apply_treeview_style,
+    make_button,
 )
 
 
 class FeedsTab:
     def __init__(self, parent: tk.Frame, run_update_fn) -> None:
-        self.parent        = parent
+        self.parent = parent
         self.run_update_fn = run_update_fn
         self._build()
 
@@ -29,27 +35,25 @@ class FeedsTab:
         btn_row = tk.Frame(t, bg=BG)
         btn_row.pack(fill=tk.X, padx=15, pady=8)
         make_button(btn_row, "⬇  Update All Feeds", self.run_update_fn, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "🔄 Refresh",           self.refresh,       "#444" ).pack(side=tk.LEFT)
+        make_button(btn_row, "🔄 Refresh", self.refresh, "#444").pack(side=tk.LEFT)
 
-        cols   = ("Feed Name",                    "IOC Count", "Last Updated", "Status")
-        widths = (330,                              100,         180,            80)
+        cols = ("Feed Name", "IOC Count", "Last Updated", "Status")
+        widths = (330, 100, 180, 80)
 
         self.tree = ttk.Treeview(t, columns=cols, show="headings", height=12)
         apply_treeview_style(self.tree)
 
-        for col, w in zip(cols, widths):
+        for col, w in zip(cols, widths, strict=False):
             self.tree.heading(col, text=col)
             self.tree.column(col, width=w, anchor="w")
 
-        self.tree.tag_configure("ok",      foreground=ACCENT)
-        self.tree.tag_configure("failed",  foreground=DANGER)
+        self.tree.tag_configure("ok", foreground=ACCENT)
+        self.tree.tag_configure("failed", foreground=DANGER)
         self.tree.tag_configure("pending", foreground=WARN)
 
         self.tree.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 6))
 
-        self.total_label = tk.Label(
-            t, text="", bg=BG, fg=MUTED, font=("Consolas", 10)
-        )
+        self.total_label = tk.Label(t, text="", bg=BG, fg=MUTED, font=("Consolas", 10))
         self.total_label.pack(anchor="w", padx=15, pady=4)
 
         self.refresh()
@@ -61,9 +65,10 @@ class FeedsTab:
             self.tree.delete(item)
 
         if not os.path.exists(DB_PATH):
-            for feed_name, cfg in THREAT_FEEDS.items():
+            for _feed_name, cfg in THREAT_FEEDS.items():
                 self.tree.insert(
-                    "", tk.END,
+                    "",
+                    tk.END,
                     values=(cfg["label"], "—", "Not downloaded", "PENDING"),
                     tags=("pending",),
                 )
@@ -71,12 +76,11 @@ class FeedsTab:
 
         try:
             conn = sqlite3.connect(DB_PATH)
-            cur  = conn.cursor()
+            cur = conn.cursor()
 
             for feed_name, cfg in THREAT_FEEDS.items():
                 cur.execute(
-                    "SELECT ioc_count, last_updated, status "
-                    "FROM feed_status WHERE feed_name=?",
+                    "SELECT ioc_count, last_updated, status FROM feed_status WHERE feed_name=?",
                     (feed_name,),
                 )
                 row = cur.fetchone()
@@ -84,7 +88,8 @@ class FeedsTab:
                     count, updated, status = row
                     tag = "ok" if status == "OK" else "failed"
                     self.tree.insert(
-                        "", tk.END,
+                        "",
+                        tk.END,
                         values=(
                             cfg["label"],
                             f"{count:,}",
@@ -95,7 +100,8 @@ class FeedsTab:
                     )
                 else:
                     self.tree.insert(
-                        "", tk.END,
+                        "",
+                        tk.END,
                         values=(cfg["label"], "—", "Not downloaded", "PENDING"),
                         tags=("pending",),
                     )
@@ -106,4 +112,5 @@ class FeedsTab:
             self.total_label.config(text=f"Total IOCs in database: {total:,}")
         except Exception as e:
             from logger import log
+
             log.warning("Feed status refresh error: %s", e)

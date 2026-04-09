@@ -14,13 +14,17 @@ import csv
 import os
 import sqlite3
 import tkinter as tk
-from tkinter import messagebox, filedialog, ttk
 from datetime import datetime
+from tkinter import filedialog, messagebox, ttk
 
-from config import DB_PATH, ALERT_HISTORY_LIMIT
+from config import ALERT_HISTORY_LIMIT, DB_PATH
 from gui.theme import (
-    BG, FG, PANEL, ACCENT, ACCENT2, WARN, DANGER, MUTED,
-    make_button, apply_treeview_style,
+    ACCENT2,
+    BG,
+    DANGER,
+    WARN,
+    apply_treeview_style,
+    make_button,
 )
 
 
@@ -34,23 +38,23 @@ class AlertsTab:
 
         btn_row = tk.Frame(t, bg=BG)
         btn_row.pack(fill=tk.X, padx=15, pady=8)
-        make_button(btn_row, "  Refresh",          self.refresh,       "#444"  ).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "  Export CSV",        self._export_csv,   ACCENT2 ).pack(side=tk.LEFT, padx=(0, 8))
-        make_button(btn_row, "Clear All Alerts",    self._clear_alerts, DANGER  ).pack(side=tk.LEFT)
+        make_button(btn_row, "  Refresh", self.refresh, "#444").pack(side=tk.LEFT, padx=(0, 8))
+        make_button(btn_row, "  Export CSV", self._export_csv, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
+        make_button(btn_row, "Clear All Alerts", self._clear_alerts, DANGER).pack(side=tk.LEFT)
 
         # --- Treeview ---
-        cols   = ("Time", "Severity", "Type", "IOC", "Context")
-        widths = (135,    80,          240,    160,    260)
+        cols = ("Time", "Severity", "Type", "IOC", "Context")
+        widths = (135, 80, 240, 160, 260)
 
         self.tree = ttk.Treeview(t, columns=cols, show="headings", height=18)
         apply_treeview_style(self.tree)
 
-        for col, w in zip(cols, widths):
+        for col, w in zip(cols, widths, strict=False):
             self.tree.heading(col, text=col)
             self.tree.column(col, width=w, anchor="w")
 
         self.tree.tag_configure("critical", foreground=DANGER)
-        self.tree.tag_configure("warning",  foreground=WARN)
+        self.tree.tag_configure("warning", foreground=WARN)
 
         scrollbar = ttk.Scrollbar(t, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -68,17 +72,21 @@ class AlertsTab:
             return
         try:
             conn = sqlite3.connect(DB_PATH)
-            cur  = conn.cursor()
-            cur.execute("""
+            cur = conn.cursor()
+            cur.execute(
+                """
                 SELECT timestamp, severity, alert_type, ioc_value, context
                 FROM alerts ORDER BY id DESC LIMIT ?
-            """, (ALERT_HISTORY_LIMIT,))
+            """,
+                (ALERT_HISTORY_LIMIT,),
+            )
             for row in cur.fetchall():
                 tag = "critical" if row[1] == "CRITICAL" else "warning"
                 self.tree.insert("", tk.END, values=row, tags=(tag,))
             conn.close()
         except Exception as e:
             from logger import log
+
             log.warning("Alert history refresh error: %s", e)
 
     def _clear_alerts(self) -> None:
@@ -106,7 +114,7 @@ class AlertsTab:
             return
         try:
             conn = sqlite3.connect(DB_PATH)
-            cur  = conn.cursor()
+            cur = conn.cursor()
             cur.execute(
                 "SELECT timestamp, severity, alert_type, ioc_value, ioc_type, "
                 "source_feed, context, details FROM alerts ORDER BY id DESC"
@@ -116,10 +124,18 @@ class AlertsTab:
 
             with open(path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow([
-                    "Timestamp", "Severity", "Alert Type", "IOC Value",
-                    "IOC Type", "Source Feed", "Context", "Details"
-                ])
+                writer.writerow(
+                    [
+                        "Timestamp",
+                        "Severity",
+                        "Alert Type",
+                        "IOC Value",
+                        "IOC Type",
+                        "Source Feed",
+                        "Context",
+                        "Details",
+                    ]
+                )
                 writer.writerows(rows)
 
             messagebox.showinfo("PhantomEye", f"Exported {len(rows)} alerts to:\n{path}")

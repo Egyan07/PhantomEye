@@ -24,18 +24,19 @@
 # =============================================================================
 
 import os
-import re
 import sqlite3
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime
 
 from config import DB_PATH, FEEDS_DIR, THREAT_FEEDS
 from logger import log
 from utils import (
-    is_valid_ip, is_valid_ipv4, is_private_ip,
-    is_valid_domain, is_whitelisted,
     extract_domain_from_url,
+    is_private_ip,
+    is_valid_domain,
+    is_valid_ip,
+    is_whitelisted,
 )
 
 # ---------------------------------------------------------------------------
@@ -69,15 +70,10 @@ def load_ioc_cache() -> dict[str, set]:
             cur.execute("SELECT MAX(last_updated) FROM feed_status WHERE status='OK'")
             row = cur.fetchone()
             _meta_cache["last_updated"] = row[0] if row and row[0] else "Never"
-            _meta_cache["total_iocs"]   = (
-                len(_ioc_cache["ip"]) + len(_ioc_cache["domain"])
-            )
+            _meta_cache["total_iocs"] = len(_ioc_cache["ip"]) + len(_ioc_cache["domain"])
         finally:
             conn.close()
-        log.info(
-            "IOC cache loaded: %d IPs, %d domains",
-            len(_ioc_cache["ip"]), len(_ioc_cache["domain"])
-        )
+        log.info("IOC cache loaded: %d IPs, %d domains", len(_ioc_cache["ip"]), len(_ioc_cache["domain"]))
     except Exception as e:
         log.warning("Could not load IOC cache: %s", e)
     return _ioc_cache
@@ -107,12 +103,13 @@ def get_last_feed_time() -> str:
 #   Download
 # ---------------------------------------------------------------------------
 
+
 def download_feed(feed_name: str, feed_config: dict) -> str | None:
     """
     Download a single threat feed and return raw content as a string.
     Falls back to the cached file on download failure.
     """
-    url      = feed_config["url"]
+    url = feed_config["url"]
     filepath = os.path.join(FEEDS_DIR, f"{feed_name}.txt")
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "PhantomEye/1.2"})
@@ -126,7 +123,7 @@ def download_feed(feed_name: str, feed_config: dict) -> str | None:
         if os.path.exists(filepath):
             log.info("Using cached feed for: %s", feed_name)
             try:
-                with open(filepath, "r", encoding="utf-8") as f:
+                with open(filepath, encoding="utf-8") as f:
                     return f.read()
             except OSError as read_err:
                 log.error("Could not read cached feed [%s]: %s", feed_name, read_err)
@@ -138,14 +135,14 @@ def download_feed(feed_name: str, feed_config: dict) -> str | None:
 # ---------------------------------------------------------------------------
 
 _THREAT_MAP = {
-    "feodo_ips":        "c2",
+    "feodo_ips": "c2",
     "emerging_threats": "compromised",
-    "cins_score":       "bad_actor",
-    "abuse_ssl":        "malware",
-    "urlhaus_domains":  "malware",
-    "openphish":        "phishing",
-    "botvrij_domains":  "malware",
-    "botvrij_ips":      "malware",
+    "cins_score": "bad_actor",
+    "abuse_ssl": "malware",
+    "urlhaus_domains": "malware",
+    "openphish": "phishing",
+    "botvrij_domains": "malware",
+    "botvrij_ips": "malware",
 }
 
 
@@ -159,10 +156,10 @@ def parse_feed(content: str, feed_name: str, feed_config: dict) -> list[str]:
     FIX: Builds a set directly (no list→set round-trip).
     FIX: Single whitelist check at the end — removed redundant inline checks.
     """
-    iocs:     set[str] = set()
-    fmt      = feed_config["format"]
+    iocs: set[str] = set()
+    fmt = feed_config["format"]
     ioc_type = feed_config["type"]
-    lines    = content.splitlines()
+    lines = content.splitlines()
 
     ip_col_index = _detect_ip_column(lines, fmt)
 
@@ -213,7 +210,7 @@ def _detect_ip_column(lines: list[str], fmt: str) -> int:
         if not line or not line.startswith("#"):
             continue
         header = line.lstrip("# ").lower()
-        cols   = [c.strip() for c in header.split(",")]
+        cols = [c.strip() for c in header.split(",")]
         for i, col in enumerate(cols):
             if col in ("dst_ip", "dstip", "ip", "ipaddress", "ip_address"):
                 return i
@@ -223,6 +220,7 @@ def _detect_ip_column(lines: list[str], fmt: str) -> int:
 # ---------------------------------------------------------------------------
 #   Ingestion
 # ---------------------------------------------------------------------------
+
 
 def update_feeds(callback=None) -> int:
     """
@@ -240,11 +238,11 @@ def update_feeds(callback=None) -> int:
     # always closed — even if an unexpected exception escapes the feed loop.
     # Previously conn.close() at the bottom was unreachable on any exception,
     # leaving the SQLite file handle open until the GC ran.
-    conn      = sqlite3.connect(DB_PATH)
-    cur       = conn.cursor()
-    now       = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     total_new = 0
-    total     = 0
+    total = 0
 
     try:
         for feed_name, feed_config in THREAT_FEEDS.items():
@@ -255,11 +253,14 @@ def update_feeds(callback=None) -> int:
 
             content = download_feed(feed_name, feed_config)
             if content is None:
-                cur.execute("""
+                cur.execute(
+                    """
                     INSERT OR REPLACE INTO feed_status
                         (feed_name, label, last_updated, ioc_count, status)
                     VALUES (?, ?, ?, 0, 'FAILED')
-                """, (feed_name, label, now))
+                """,
+                    (feed_name, label, now),
+                )
                 conn.commit()
                 msg = f"  {label}: FAILED (no cache available)"
                 log.warning(msg)
@@ -267,32 +268,35 @@ def update_feeds(callback=None) -> int:
                     callback(msg)
                 continue
 
-            iocs        = parse_feed(content, feed_name, feed_config)
-            ioc_type    = feed_config["type"]
+            iocs = parse_feed(content, feed_name, feed_config)
+            ioc_type = feed_config["type"]
             threat_type = _THREAT_MAP.get(feed_name, "malicious")
 
             added = 0
             for ioc_value in iocs:
                 try:
-                    cur.execute("""
+                    cur.execute(
+                        """
                         INSERT OR IGNORE INTO iocs
                             (type, value, threat_type, source, first_added, last_updated)
                         VALUES (?, ?, ?, ?, ?, ?)
-                    """, (ioc_type, ioc_value, threat_type, feed_name, now, now))
+                    """,
+                        (ioc_type, ioc_value, threat_type, feed_name, now, now),
+                    )
                     if cur.rowcount > 0:
                         added += 1
                 except Exception as e:
                     log.debug("IOC insert failed [%s / %s]: %s", feed_name, ioc_value, e)
 
+            cur.execute("UPDATE iocs SET last_updated=? WHERE source=?", (now, feed_name))
             cur.execute(
-                "UPDATE iocs SET last_updated=? WHERE source=?",
-                (now, feed_name)
-            )
-            cur.execute("""
+                """
                 INSERT OR REPLACE INTO feed_status
                     (feed_name, label, last_updated, ioc_count, status)
                 VALUES (?, ?, ?, ?, 'OK')
-            """, (feed_name, label, now, len(iocs)))
+            """,
+                (feed_name, label, now, len(iocs)),
+            )
 
             conn.commit()
             total_new += added
@@ -308,10 +312,7 @@ def update_feeds(callback=None) -> int:
     # Rebuild both caches after update
     load_ioc_cache()
 
-    summary = (
-        f"Feed update complete. "
-        f"Total IOCs in database: {total:,} ({total_new} newly added)"
-    )
+    summary = f"Feed update complete. Total IOCs in database: {total:,} ({total_new} newly added)"
     log.info(summary)
     if callback:
         callback(summary)
@@ -332,9 +333,7 @@ def check_stale_feeds() -> list[str]:
         try:
             cur = conn.cursor()
             for feed_name in THREAT_FEEDS:
-                cur.execute(
-                    "SELECT status FROM feed_status WHERE feed_name=?", (feed_name,)
-                )
+                cur.execute("SELECT status FROM feed_status WHERE feed_name=?", (feed_name,))
                 row = cur.fetchone()
                 if row is None or row[0] != "OK":
                     stale.append(feed_name)

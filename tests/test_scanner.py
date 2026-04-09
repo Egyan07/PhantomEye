@@ -7,19 +7,21 @@
 #   Run with: pytest tests/test_scanner.py -v
 # =============================================================================
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import sqlite3
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
+import pytest
 
 # ---------------------------------------------------------------------------
 #   Shared fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def mock_env(tmp_path):
@@ -31,29 +33,31 @@ def mock_env(tmp_path):
     top level, so we must patch both the config module AND the scanner module's
     own references to ensure the test-time values are used.
     """
-    db_path   = str(tmp_path / "phantom_eye.db")
-    log_path  = str(tmp_path / "pfirewall.log")
+    db_path = str(tmp_path / "phantom_eye.db")
+    log_path = str(tmp_path / "pfirewall.log")
 
-    with patch("config.LOG_DIR",             str(tmp_path / "logs")), \
-         patch("config.FEEDS_DIR",           str(tmp_path / "feeds")), \
-         patch("config.LOG_FILE",            str(tmp_path / "phantom_eye.log")), \
-         patch("config.DB_PATH",             db_path), \
-         patch("config.FIREWALL_LOG",        log_path), \
-         patch("config.FIREWALL_LOG_DAYS",   1), \
-         patch("config.ADMIN_PC",            "TESTPC"), \
-         patch("config.ALERT_DEDUPE_HOURS",  24), \
-         patch("config.EMAIL_ENABLED",       False), \
-         patch("config.WHITELIST_IPS",       ["127.0.0.1", "0.0.0.0"]), \
-         patch("config.WHITELIST_DOMAINS",   ["microsoft.com", "google.com"]), \
-         patch("scanner.FIREWALL_LOG",       log_path), \
-         patch("scanner.FIREWALL_LOG_DAYS",  1), \
-         patch("scanner.DB_PATH",            db_path), \
-         patch("alerts.DB_PATH",             db_path), \
-         patch("alerts.ADMIN_PC",            "TESTPC"), \
-         patch("alerts.ALERT_DEDUPE_HOURS",  24), \
-         patch("alerts.EMAIL_ENABLED",       False), \
-         patch("subprocess.run"):
-        os.makedirs(str(tmp_path / "logs"),  exist_ok=True)
+    with (
+        patch("config.LOG_DIR", str(tmp_path / "logs")),
+        patch("config.FEEDS_DIR", str(tmp_path / "feeds")),
+        patch("config.LOG_FILE", str(tmp_path / "phantom_eye.log")),
+        patch("config.DB_PATH", db_path),
+        patch("config.FIREWALL_LOG", log_path),
+        patch("config.FIREWALL_LOG_DAYS", 1),
+        patch("config.ADMIN_PC", "TESTPC"),
+        patch("config.ALERT_DEDUPE_HOURS", 24),
+        patch("config.EMAIL_ENABLED", False),
+        patch("config.WHITELIST_IPS", ["127.0.0.1", "0.0.0.0"]),
+        patch("config.WHITELIST_DOMAINS", ["microsoft.com", "google.com"]),
+        patch("scanner.FIREWALL_LOG", log_path),
+        patch("scanner.FIREWALL_LOG_DAYS", 1),
+        patch("scanner.DB_PATH", db_path),
+        patch("alerts.DB_PATH", db_path),
+        patch("alerts.ADMIN_PC", "TESTPC"),
+        patch("alerts.ALERT_DEDUPE_HOURS", 24),
+        patch("alerts.EMAIL_ENABLED", False),
+        patch("subprocess.run"),
+    ):
+        os.makedirs(str(tmp_path / "logs"), exist_ok=True)
         os.makedirs(str(tmp_path / "feeds"), exist_ok=True)
 
         # Create real SQLite tables so scanner's sqlite3.connect(DB_PATH) works
@@ -98,22 +102,22 @@ def mock_env(tmp_path):
 
 
 SAMPLE_CACHE = {
-    "ip":     {"185.234.1.1", "5.5.5.5"},
+    "ip": {"185.234.1.1", "5.5.5.5"},
     "domain": {"evil.ru", "malware.bad.com"},
 }
 
 EMPTY_CACHE = {
-    "ip":     set(),
+    "ip": set(),
     "domain": set(),
 }
 
 
-from scanner import scan_firewall_logs, scan_dns_cache, analyse_email_headers
-
+from scanner import analyse_email_headers, scan_dns_cache, scan_firewall_logs
 
 # ---------------------------------------------------------------------------
 #   Helpers
 # ---------------------------------------------------------------------------
+
 
 def _today_str():
     """Return today's date as YYYY-MM-DD."""
@@ -135,8 +139,8 @@ def _write_firewall_log(tmp_path, lines):
 #   Task 1 — Firewall log scanner (11 tests)
 # ===========================================================================
 
-class TestFirewallScanner:
 
+class TestFirewallScanner:
     def test_no_log_file_returns_empty(self, tmp_path):
         """When the firewall log file does not exist, return an empty list."""
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
@@ -146,10 +150,13 @@ class TestFirewallScanner:
     def test_detects_malicious_dst_ip_allow(self, tmp_path):
         """ALLOW + known malicious dst IP should produce a hit."""
         now = _now_str()
-        _write_firewall_log(tmp_path, [
-            "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
+            ],
+        )
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
             hits = scan_firewall_logs()
         assert len(hits) == 1
@@ -160,10 +167,13 @@ class TestFirewallScanner:
     def test_detects_malicious_dst_ip_drop(self, tmp_path):
         """DROP + known malicious dst IP should produce a hit."""
         now = _now_str()
-        _write_firewall_log(tmp_path, [
-            "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
-            f"{now.split()[0]} {now.split()[1]} DROP TCP 192.168.1.10 5.5.5.5 54321 443",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
+                f"{now.split()[0]} {now.split()[1]} DROP TCP 192.168.1.10 5.5.5.5 54321 443",
+            ],
+        )
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
             hits = scan_firewall_logs()
         assert len(hits) == 1
@@ -173,10 +183,13 @@ class TestFirewallScanner:
     def test_detects_malicious_src_ip(self, tmp_path):
         """Inbound from a known malicious IP should produce a hit."""
         now = _now_str()
-        _write_firewall_log(tmp_path, [
-            "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
-            f"{now.split()[0]} {now.split()[1]} DROP TCP 185.234.1.1 192.168.1.10 80 54321",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
+                f"{now.split()[0]} {now.split()[1]} DROP TCP 185.234.1.1 192.168.1.10 80 54321",
+            ],
+        )
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
             hits = scan_firewall_logs()
         assert any(h["direction"] == "inbound" for h in hits)
@@ -186,9 +199,12 @@ class TestFirewallScanner:
     def test_skips_old_entries(self, tmp_path):
         """Entries older than FIREWALL_LOG_DAYS should be ignored."""
         old_date = (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d %H:%M:%S")
-        _write_firewall_log(tmp_path, [
-            f"{old_date.split()[0]} {old_date.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                f"{old_date.split()[0]} {old_date.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
+            ],
+        )
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
             hits = scan_firewall_logs()
         assert hits == []
@@ -196,14 +212,17 @@ class TestFirewallScanner:
     def test_skips_comments_and_blanks(self, tmp_path):
         """Comment lines and blank lines should be skipped without errors."""
         now = _now_str()
-        _write_firewall_log(tmp_path, [
-            "#Version: 1.5",
-            "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
-            "",
-            "# This is a comment",
-            "",
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 8.8.8.8 54321 53",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                "#Version: 1.5",
+                "#Fields: date time action protocol src-ip dst-ip src-port dst-port",
+                "",
+                "# This is a comment",
+                "",
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 8.8.8.8 54321 53",
+            ],
+        )
         with patch("lookup.get_ioc_cache", return_value=EMPTY_CACHE):
             hits = scan_firewall_logs()
         assert hits == []
@@ -211,9 +230,12 @@ class TestFirewallScanner:
     def test_clean_ip_not_flagged(self, tmp_path):
         """An IP not in the threat cache should produce no hits."""
         now = _now_str()
-        _write_firewall_log(tmp_path, [
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 8.8.8.8 54321 53",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 8.8.8.8 54321 53",
+            ],
+        )
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
             hits = scan_firewall_logs()
         assert hits == []
@@ -221,11 +243,14 @@ class TestFirewallScanner:
     def test_deduplicates_same_ip(self, tmp_path):
         """The same malicious IP appearing multiple times should produce only one hit."""
         now = _now_str()
-        _write_firewall_log(tmp_path, [
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54322 443",
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54323 443",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54322 443",
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54323 443",
+            ],
+        )
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
             hits = scan_firewall_logs()
         dst_hits = [h for h in hits if h["direction"] == "outbound"]
@@ -234,9 +259,12 @@ class TestFirewallScanner:
     def test_callback_receives_messages(self, tmp_path):
         """The callback should be called with status messages."""
         now = _now_str()
-        _write_firewall_log(tmp_path, [
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
+            ],
+        )
         messages = []
         with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
             scan_firewall_logs(callback=messages.append)
@@ -249,8 +277,10 @@ class TestFirewallScanner:
         log_path.write_text("dummy", encoding="utf-8")
 
         messages = []
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("builtins.open", side_effect=PermissionError("Access denied")):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("builtins.open", side_effect=PermissionError("Access denied")),
+        ):
             hits = scan_firewall_logs(callback=messages.append)
         assert hits == []
         assert any("ERROR" in m or "Cannot read" in m for m in messages)
@@ -259,12 +289,15 @@ class TestFirewallScanner:
         """A private src IP should never be flagged even if it were in the cache."""
         now = _now_str()
         # Private source, clean public destination
-        _write_firewall_log(tmp_path, [
-            f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 8.8.8.8 54321 53",
-        ])
+        _write_firewall_log(
+            tmp_path,
+            [
+                f"{now.split()[0]} {now.split()[1]} ALLOW TCP 192.168.1.10 8.8.8.8 54321 53",
+            ],
+        )
         # Put the private IP in the cache to prove it's skipped
         cache_with_private = {
-            "ip":     {"192.168.1.10", "8.8.8.8"},
+            "ip": {"192.168.1.10", "8.8.8.8"},
             "domain": set(),
         }
         with patch("lookup.get_ioc_cache", return_value=cache_with_private):
@@ -278,8 +311,8 @@ class TestFirewallScanner:
 #   Task 2 — DNS cache scanner (7 tests)
 # ===========================================================================
 
-class TestDNSCacheScanner:
 
+class TestDNSCacheScanner:
     def _mock_ps_result(self, stdout="", returncode=0, stderr=""):
         """Create a mock subprocess.run result for PowerShell DNS queries."""
         mock_result = MagicMock()
@@ -291,8 +324,10 @@ class TestDNSCacheScanner:
     def test_detects_malicious_domain(self, tmp_path):
         """A domain in the cache that matches a threat feed should be a hit."""
         ps_output = "evil.ru\nsafe-site.com\n"
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)),
+        ):
             hits = scan_dns_cache()
         assert len(hits) == 1
         assert hits[0]["ioc"] == "evil.ru"
@@ -300,16 +335,20 @@ class TestDNSCacheScanner:
     def test_clean_domains_no_hits(self, tmp_path):
         """Domains not in the threat cache should produce no hits."""
         ps_output = "safe-site.com\nanother-clean.org\n"
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)),
+        ):
             hits = scan_dns_cache()
         assert hits == []
 
     def test_whitelisted_domain_skipped(self, tmp_path):
         """Whitelisted domains (e.g. microsoft.com) should be skipped."""
         ps_output = "microsoft.com\nlogin.microsoft.com\nevil.ru\n"
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)),
+        ):
             hits = scan_dns_cache()
         # Only evil.ru should be a hit; microsoft.com variants are whitelisted
         assert len(hits) == 1
@@ -317,15 +356,19 @@ class TestDNSCacheScanner:
 
     def test_empty_cache_returns_empty(self, tmp_path):
         """When PowerShell returns no domains, result should be empty."""
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("scanner.subprocess.run", return_value=self._mock_ps_result("")):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=self._mock_ps_result("")),
+        ):
             hits = scan_dns_cache()
         assert hits == []
 
     def test_powershell_error_returns_empty(self, tmp_path):
         """If PowerShell raises an exception, return empty list gracefully."""
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("scanner.subprocess.run", side_effect=FileNotFoundError("powershell not found")):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", side_effect=FileNotFoundError("powershell not found")),
+        ):
             hits = scan_dns_cache()
         assert hits == []
 
@@ -333,8 +376,10 @@ class TestDNSCacheScanner:
         """The callback should receive status messages during the scan."""
         ps_output = "evil.ru\n"
         messages = []
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)),
+        ):
             scan_dns_cache(callback=messages.append)
         assert len(messages) > 0
         assert any("[HIT]" in m for m in messages)
@@ -342,8 +387,10 @@ class TestDNSCacheScanner:
     def test_deduplicates_domains(self, tmp_path):
         """Duplicate domains in PowerShell output should produce only one hit."""
         ps_output = "evil.ru\nevil.ru\nevil.ru\n"
-        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE), \
-             patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)):
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)),
+        ):
             hits = scan_dns_cache()
         assert len(hits) == 1
 
@@ -352,8 +399,8 @@ class TestDNSCacheScanner:
 #   Task 3 — Email header analyser (10 tests)
 # ===========================================================================
 
-class TestEmailHeaderAnalyser:
 
+class TestEmailHeaderAnalyser:
     CLEAN_HEADERS = (
         "Received: from mail.safe.com (1.2.3.4) by mx.example.com\n"
         "From: user@safe.com\n"
@@ -363,15 +410,11 @@ class TestEmailHeaderAnalyser:
     )
 
     MALICIOUS_IP_HEADERS = (
-        "Received: from relay.unknown.com (185.234.1.1) by mx.example.com\n"
-        "From: user@unknown.com\n"
-        "Subject: Important\n"
+        "Received: from relay.unknown.com (185.234.1.1) by mx.example.com\nFrom: user@unknown.com\nSubject: Important\n"
     )
 
     MALICIOUS_DOMAIN_HEADERS = (
-        "Received: from evil.ru (1.2.3.4) by mx.example.com\n"
-        "From: user@evil.ru\n"
-        "Subject: Click here\n"
+        "Received: from evil.ru (1.2.3.4) by mx.example.com\nFrom: user@evil.ru\nSubject: Click here\n"
     )
 
     MISMATCH_HEADERS = (
@@ -409,10 +452,7 @@ class TestEmailHeaderAnalyser:
 
     def test_private_ips_excluded(self, tmp_path):
         """Private IPs (10.x, 192.168.x) in Received: headers should be excluded."""
-        headers = (
-            "Received: from internal (192.168.1.1) by gateway (10.0.0.1)\n"
-            "Subject: Test\n"
-        )
+        headers = "Received: from internal (192.168.1.1) by gateway (10.0.0.1)\nSubject: Test\n"
         with patch("lookup.get_ioc_cache", return_value=EMPTY_CACHE):
             report = analyse_email_headers(headers)
         # Private IPs should not appear in the report IP list
@@ -460,14 +500,15 @@ class TestEmailHeaderAnalyser:
     def test_whitelisted_domain_excluded(self, tmp_path):
         """Whitelisted domains (e.g. google.com) should not appear as hits."""
         headers = (
-            "Received: from mail.google.com (142.250.80.5) by mx.example.com\n"
-            "From: user@google.com\n"
-            "Subject: Test\n"
+            "Received: from mail.google.com (142.250.80.5) by mx.example.com\nFrom: user@google.com\nSubject: Test\n"
         )
-        with patch("lookup.get_ioc_cache", return_value={
-            "ip": set(),
-            "domain": {"google.com"},  # even if in cache, whitelist should skip
-        }):
+        with patch(
+            "lookup.get_ioc_cache",
+            return_value={
+                "ip": set(),
+                "domain": {"google.com"},  # even if in cache, whitelist should skip
+            },
+        ):
             report = analyse_email_headers(headers)
         # google.com is whitelisted so should not appear as MALICIOUS
         assert "MALICIOUS" not in report or "google.com" not in report

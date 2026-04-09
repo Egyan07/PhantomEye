@@ -13,16 +13,23 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
 
-from scanner import analyse_email_headers
 from gui.theme import (
-    BG, FG, PANEL, ACCENT, ACCENT2, DANGER, MUTED, ENTRY_BG,
+    ACCENT,
+    ACCENT2,
+    BG,
+    DANGER,
+    ENTRY_BG,
+    FG,
+    MUTED,
+    PANEL,
     make_button,
 )
+from scanner import analyse_email_headers
 
 
 class EmailTab:
     def __init__(self, parent: tk.Frame, set_status_fn) -> None:
-        self.parent     = parent
+        self.parent = parent
         self.set_status = set_status_fn
         self._build()
 
@@ -32,21 +39,25 @@ class EmailTab:
         tk.Label(
             t,
             text="Paste raw email headers to extract and check all sender IPs and domains.",
-            bg=BG, fg=MUTED, font=("Consolas", 10),
+            bg=BG,
+            fg=MUTED,
+            font=("Consolas", 10),
         ).pack(anchor="w", padx=15, pady=(12, 4))
         tk.Label(
             t,
             text="In Outlook: Open email → File → Properties → copy Internet Headers box.",
-            bg=BG, fg="#555", font=("Consolas", 9),
+            bg=BG,
+            fg="#555",
+            font=("Consolas", 9),
         ).pack(anchor="w", padx=15, pady=(0, 6))
 
         # --- Input ---
-        tk.Label(t, text="Email Headers Input:", bg=BG, fg=MUTED,
-                 font=("Consolas", 9)).pack(anchor="w", padx=15)
+        tk.Label(t, text="Email Headers Input:", bg=BG, fg=MUTED, font=("Consolas", 9)).pack(anchor="w", padx=15)
 
         self.input_box = scrolledtext.ScrolledText(
             t,
-            bg=ENTRY_BG, fg=FG,
+            bg=ENTRY_BG,
+            fg=FG,
             font=("Consolas", 10),
             height=9,
             relief=tk.FLAT,
@@ -56,21 +67,16 @@ class EmailTab:
 
         btn_row = tk.Frame(t, bg=BG)
         btn_row.pack(fill=tk.X, padx=15, pady=(0, 6))
-        make_button(btn_row, "🔍  Analyse Headers", self._do_analysis, ACCENT2).pack(
-            side=tk.LEFT, padx=(0, 8)
-        )
-        make_button(
-            btn_row, "Clear",
-            lambda: self.input_box.delete("1.0", tk.END), "#444"
-        ).pack(side=tk.LEFT)
+        make_button(btn_row, "🔍  Analyse Headers", self._do_analysis, ACCENT2).pack(side=tk.LEFT, padx=(0, 8))
+        make_button(btn_row, "Clear", lambda: self.input_box.delete("1.0", tk.END), "#444").pack(side=tk.LEFT)
 
         # --- Results ---
-        tk.Label(t, text="Analysis Results:", bg=BG, fg=MUTED,
-                 font=("Consolas", 9)).pack(anchor="w", padx=15)
+        tk.Label(t, text="Analysis Results:", bg=BG, fg=MUTED, font=("Consolas", 9)).pack(anchor="w", padx=15)
 
         self.result_box = scrolledtext.ScrolledText(
             t,
-            bg=PANEL, fg=FG,
+            bg=PANEL,
+            fg=FG,
             font=("Consolas", 10),
             height=9,
             relief=tk.FLAT,
@@ -78,7 +84,7 @@ class EmailTab:
         )
         self.result_box.pack(fill=tk.BOTH, expand=True, padx=15, pady=(2, 10))
         self.result_box.tag_config("danger", foreground=DANGER)
-        self.result_box.tag_config("ok",     foreground=ACCENT)
+        self.result_box.tag_config("ok", foreground=ACCENT)
 
     # -----------------------------------------------------------------------
 
@@ -96,10 +102,7 @@ class EmailTab:
 
         def task():
             report = analyse_email_headers(headers)
-            suspicious = any(
-                kw in report
-                for kw in ("SUSPICIOUS", "MALICIOUS", "WARNING")
-            )
+            suspicious = any(kw in report for kw in ("SUSPICIOUS", "MALICIOUS", "WARNING"))
             tag = "danger" if suspicious else "ok"
             self.parent.after(0, self._show_result, report, tag)
 

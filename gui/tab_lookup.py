@@ -12,17 +12,23 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
 
-from lookup import lookup_ioc, format_lookup_result
-from feeds import feeds_loaded
 from gui.theme import (
-    BG, FG, PANEL, ACCENT, ACCENT2, DANGER, MUTED, ENTRY_BG,
+    ACCENT,
+    ACCENT2,
+    BG,
+    DANGER,
+    ENTRY_BG,
+    FG,
+    MUTED,
+    PANEL,
     make_button,
 )
+from lookup import format_lookup_result, lookup_ioc
 
 
 class LookupTab:
     def __init__(self, parent: tk.Frame, set_status_fn) -> None:
-        self.parent     = parent
+        self.parent = parent
         self.set_status = set_status_fn
         self._build()
 
@@ -32,7 +38,9 @@ class LookupTab:
         tk.Label(
             t,
             text="Enter any IP address or domain name to check against all threat feeds.",
-            bg=BG, fg=MUTED, font=("Consolas", 10),
+            bg=BG,
+            fg=MUTED,
+            font=("Consolas", 10),
         ).pack(anchor="w", padx=15, pady=(12, 4))
 
         # --- Entry row ---
@@ -41,10 +49,12 @@ class LookupTab:
 
         self.entry = tk.Entry(
             entry_frame,
-            bg=ENTRY_BG, fg=FG,
+            bg=ENTRY_BG,
+            fg=FG,
             font=("Consolas", 13),
             insertbackground=FG,
-            relief=tk.FLAT, bd=6,
+            relief=tk.FLAT,
+            bd=6,
         )
         self.entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 8))
         self.entry.bind("<Return>", lambda _e: self._do_lookup())
@@ -53,11 +63,7 @@ class LookupTab:
         self.entry.insert(0, _PLACEHOLDER)
         self.entry.bind(
             "<FocusIn>",
-            lambda _e: (
-                self.entry.delete(0, tk.END)
-                if "e.g." in self.entry.get()
-                else None
-            ),
+            lambda _e: self.entry.delete(0, tk.END) if "e.g." in self.entry.get() else None,
         )
 
         make_button(entry_frame, "Lookup", self._do_lookup, ACCENT2).pack(side=tk.LEFT)
@@ -65,19 +71,16 @@ class LookupTab:
         # --- Results box ---
         self.result_box = scrolledtext.ScrolledText(
             t,
-            bg=PANEL, fg=FG,
+            bg=PANEL,
+            fg=FG,
             font=("Consolas", 11),
             height=20,
             relief=tk.FLAT,
             insertbackground=FG,
         )
         self.result_box.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
-        self.result_box.tag_config(
-            "danger", foreground=DANGER, font=("Consolas", 11, "bold")
-        )
-        self.result_box.tag_config(
-            "ok", foreground=ACCENT, font=("Consolas", 11, "bold")
-        )
+        self.result_box.tag_config("danger", foreground=DANGER, font=("Consolas", 11, "bold"))
+        self.result_box.tag_config("ok", foreground=ACCENT, font=("Consolas", 11, "bold"))
         self.result_box.insert(
             tk.END,
             "Paste an IP address or domain and press Lookup or hit Enter.\n\n"
@@ -103,8 +106,8 @@ class LookupTab:
 
         def task():
             result = lookup_ioc(value)
-            text   = format_lookup_result(result)
-            tag    = "danger" if result["found"] else "ok"
+            text = format_lookup_result(result)
+            tag = "danger" if result["found"] else "ok"
 
             # Update GUI from the main thread
             self.parent.after(0, self._show_result, text, tag, value, result["found"])

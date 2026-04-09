@@ -15,8 +15,8 @@
 import sqlite3
 
 from config import DB_PATH
+from feeds import feeds_loaded, get_ioc_cache, get_last_feed_time
 from utils import is_valid_ip, is_whitelisted
-from feeds import get_ioc_cache, feeds_loaded, get_last_feed_time
 
 
 def is_ioc_known(value: str, ioc_type: str) -> bool:
@@ -68,16 +68,18 @@ def lookup_ioc(value: str, ioc_type: str = None) -> dict:
     # Auto-strip full URLs to hostname
     if value.startswith("http"):
         from utils import extract_domain_from_url
+
         extracted = extract_domain_from_url(value)
-        value = extracted if extracted else (
-            value.replace("https://", "").replace("http://", "").split("/")[0]
-        )
+        value = extracted if extracted else (value.replace("https://", "").replace("http://", "").split("/")[0])
 
     # FIX: reject empty input explicitly
     if not value:
         return {
-            "found": False, "value": "", "type": "unknown",
-            "matches": [], "total_iocs": feeds_loaded(),
+            "found": False,
+            "value": "",
+            "type": "unknown",
+            "matches": [],
+            "total_iocs": feeds_loaded(),
             "feeds_last_updated": get_last_feed_time(),
             "zero_feeds_warning": feeds_loaded() == 0,
             "error": "Empty query — please enter an IP address or domain.",
@@ -88,14 +90,14 @@ def lookup_ioc(value: str, ioc_type: str = None) -> dict:
 
     total_iocs = feeds_loaded()
     result = {
-        "found":              False,
-        "value":              value,
-        "type":               ioc_type,
-        "matches":            [],
-        "total_iocs":         total_iocs,
+        "found": False,
+        "value": value,
+        "type": ioc_type,
+        "matches": [],
+        "total_iocs": total_iocs,
         "feeds_last_updated": get_last_feed_time(),
         "zero_feeds_warning": total_iocs == 0,
-        "error":              None,
+        "error": None,
     }
 
     if not is_ioc_known(value, ioc_type):
@@ -106,43 +108,54 @@ def lookup_ioc(value: str, ioc_type: str = None) -> dict:
     # Fetch metadata from DB only on a confirmed hit (one query)
     try:
         conn = sqlite3.connect(DB_PATH)
-        cur  = conn.cursor()
+        cur = conn.cursor()
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT type, value, threat_type, source, first_added, last_updated
             FROM iocs WHERE value = ? AND type = ?
-        """, (value, ioc_type))
+        """,
+            (value, ioc_type),
+        )
         row = cur.fetchone()
         if row:
-            result["matches"].append({
-                "threat_type":  row[2],
-                "source":       row[3],
-                "first_added":  row[4],
-                "last_updated": row[5],
-            })
+            result["matches"].append(
+                {
+                    "threat_type": row[2],
+                    "source": row[3],
+                    "first_added": row[4],
+                    "last_updated": row[5],
+                }
+            )
 
         # Subdomain parent match
         if ioc_type == "domain" and not result["matches"]:
             parts = value.split(".")
             for i in range(1, len(parts) - 1):
                 parent = ".".join(parts[i:])
-                cur.execute("""
+                cur.execute(
+                    """
                     SELECT type, value, threat_type, source
                     FROM iocs WHERE value = ? AND type = 'domain'
-                """, (parent,))
+                """,
+                    (parent,),
+                )
                 parent_row = cur.fetchone()
                 if parent_row:
                     result["subdomain_match"] = parent
-                    result["matches"].append({
-                        "threat_type": parent_row[2],
-                        "source":      parent_row[3],
-                        "note":        f"Subdomain of known malicious domain: {parent}",
-                    })
+                    result["matches"].append(
+                        {
+                            "threat_type": parent_row[2],
+                            "source": parent_row[3],
+                            "note": f"Subdomain of known malicious domain: {parent}",
+                        }
+                    )
                     break
 
         conn.close()
     except Exception as e:
         from logger import log
+
         log.debug("Could not fetch IOC metadata for %s: %s", value, e)
 
     return result

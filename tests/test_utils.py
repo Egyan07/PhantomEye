@@ -7,42 +7,50 @@
 #   Run with: pytest tests/test_utils.py -v
 # =============================================================================
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-import pytest
 from unittest.mock import patch
 
+import pytest
 
 # ---------------------------------------------------------------------------
 #   Helpers to avoid importing config (which creates log dirs)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def mock_config(tmp_path):
     """Provide minimal config so logger.py doesn't write to C:\\SecurityLogs."""
     with patch.dict("sys.modules", {}):
-        with patch("config.LOG_DIR",         str(tmp_path / "logs")), \
-             patch("config.FEEDS_DIR",        str(tmp_path / "feeds")), \
-             patch("config.LOG_FILE",         str(tmp_path / "phantom_eye.log")), \
-             patch("config.WHITELIST_IPS",    ["127.0.0.1", "0.0.0.0"]), \
-             patch("config.WHITELIST_DOMAINS", ["microsoft.com", "google.com"]):
-            os.makedirs(str(tmp_path / "logs"),  exist_ok=True)
+        with (
+            patch("config.LOG_DIR", str(tmp_path / "logs")),
+            patch("config.FEEDS_DIR", str(tmp_path / "feeds")),
+            patch("config.LOG_FILE", str(tmp_path / "phantom_eye.log")),
+            patch("config.WHITELIST_IPS", ["127.0.0.1", "0.0.0.0"]),
+            patch("config.WHITELIST_DOMAINS", ["microsoft.com", "google.com"]),
+        ):
+            os.makedirs(str(tmp_path / "logs"), exist_ok=True)
             os.makedirs(str(tmp_path / "feeds"), exist_ok=True)
             yield
 
 
 from utils import (
-    is_valid_ipv4, is_valid_ipv6, is_valid_ip,
-    is_private_ip, is_valid_domain,
-    extract_domain_from_url, is_whitelisted,
+    extract_domain_from_url,
+    is_private_ip,
+    is_valid_domain,
+    is_valid_ip,
+    is_valid_ipv4,
+    is_valid_ipv6,
+    is_whitelisted,
 )
-
 
 # ---------------------------------------------------------------------------
 #   IPv4
 # ---------------------------------------------------------------------------
+
 
 class TestIsValidIPv4:
     def test_valid(self):
@@ -68,6 +76,7 @@ class TestIsValidIPv4:
 # ---------------------------------------------------------------------------
 #   IPv6
 # ---------------------------------------------------------------------------
+
 
 class TestIsValidIPv6:
     def test_full(self):
@@ -97,6 +106,7 @@ class TestIsValidIPv6:
 #   is_valid_ip (combined)
 # ---------------------------------------------------------------------------
 
+
 class TestIsValidIP:
     def test_ipv4(self):
         assert is_valid_ip("8.8.8.8")
@@ -113,6 +123,7 @@ class TestIsValidIP:
 # ---------------------------------------------------------------------------
 #   Private IP
 # ---------------------------------------------------------------------------
+
 
 class TestIsPrivateIP:
     def test_loopback(self):
@@ -151,14 +162,15 @@ class TestIsPrivateIP:
 #   Domain validation
 # ---------------------------------------------------------------------------
 
+
 class TestIsValidDomain:
     def test_valid(self):
         assert is_valid_domain("evil.ru")
         assert is_valid_domain("sub.evil.ru")
-        assert is_valid_domain("xn--nxasmq6b.com")    # punycode
+        assert is_valid_domain("xn--nxasmq6b.com")  # punycode
 
     def test_too_short(self):
-        assert not is_valid_domain("a.b")             # TLD only 1 char
+        assert not is_valid_domain("a.b")  # TLD only 1 char
         assert not is_valid_domain("x.y")
 
     def test_single_label(self):
@@ -182,6 +194,7 @@ class TestIsValidDomain:
 # ---------------------------------------------------------------------------
 #   URL extraction
 # ---------------------------------------------------------------------------
+
 
 class TestExtractDomainFromUrl:
     def test_simple_https(self):
@@ -208,6 +221,7 @@ class TestExtractDomainFromUrl:
 # ---------------------------------------------------------------------------
 #   Whitelist
 # ---------------------------------------------------------------------------
+
 
 class TestIsWhitelisted:
     def test_private_ip_always_whitelisted(self):

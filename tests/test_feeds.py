@@ -6,34 +6,38 @@
 #   Run with: pytest tests/test_feeds.py -v
 # =============================================================================
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 @pytest.fixture(autouse=True)
 def mock_env(tmp_path):
     """Prevent logger from writing to C:\\SecurityLogs."""
-    with patch("config.LOG_DIR",   str(tmp_path / "logs")), \
-         patch("config.FEEDS_DIR", str(tmp_path / "feeds")), \
-         patch("config.LOG_FILE",  str(tmp_path / "phantom_eye.log")), \
-         patch("config.DB_PATH",   str(tmp_path / "phantom_eye.db")), \
-         patch("config.WHITELIST_IPS",     ["127.0.0.1"]), \
-         patch("config.WHITELIST_DOMAINS", ["microsoft.com"]):
-        os.makedirs(str(tmp_path / "logs"),  exist_ok=True)
+    with (
+        patch("config.LOG_DIR", str(tmp_path / "logs")),
+        patch("config.FEEDS_DIR", str(tmp_path / "feeds")),
+        patch("config.LOG_FILE", str(tmp_path / "phantom_eye.log")),
+        patch("config.DB_PATH", str(tmp_path / "phantom_eye.db")),
+        patch("config.WHITELIST_IPS", ["127.0.0.1"]),
+        patch("config.WHITELIST_DOMAINS", ["microsoft.com"]),
+    ):
+        os.makedirs(str(tmp_path / "logs"), exist_ok=True)
         os.makedirs(str(tmp_path / "feeds"), exist_ok=True)
         yield
 
 
-from feeds import parse_feed, _detect_ip_column
-
+from feeds import _detect_ip_column, parse_feed
 
 # ---------------------------------------------------------------------------
 #   _detect_ip_column
 # ---------------------------------------------------------------------------
+
 
 class TestDetectIPColumn:
     def test_feodo_header(self):
@@ -46,7 +50,7 @@ class TestDetectIPColumn:
         assert _detect_ip_column(lines, "abuse_ssl_csv") == 1
 
     def test_fallback_feodo(self):
-        lines = ["1.2.3.4,5.6.7.8"]   # no header
+        lines = ["1.2.3.4,5.6.7.8"]  # no header
         assert _detect_ip_column(lines, "feodo_csv") == 1
 
     def test_fallback_abuse_ssl(self):
@@ -61,6 +65,7 @@ class TestDetectIPColumn:
 # ---------------------------------------------------------------------------
 #   parse_feed — plain_ip
 # ---------------------------------------------------------------------------
+
 
 class TestParseFeedPlainIP:
     cfg = {"format": "plain_ip", "type": "ip"}
@@ -102,6 +107,7 @@ class TestParseFeedPlainIP:
 #   parse_feed — feodo_csv
 # ---------------------------------------------------------------------------
 
+
 class TestParseFeedFeodoCSV:
     cfg = {"format": "feodo_csv", "type": "ip"}
 
@@ -114,11 +120,7 @@ class TestParseFeedFeodoCSV:
         assert "185.234.1.1" in result
 
     def test_skips_private_in_csv(self):
-        content = (
-            "# first_seen_utc,dst_ip,dst_port\n"
-            "2024-01-01,192.168.1.1,443\n"
-            "2024-01-01,185.234.1.1,443\n"
-        )
+        content = "# first_seen_utc,dst_ip,dst_port\n2024-01-01,192.168.1.1,443\n2024-01-01,185.234.1.1,443\n"
         result = parse_feed(content, "feodo_ips", self.cfg)
         assert "192.168.1.1" not in result
         assert "185.234.1.1" in result
@@ -127,6 +129,7 @@ class TestParseFeedFeodoCSV:
 # ---------------------------------------------------------------------------
 #   parse_feed — url_extract
 # ---------------------------------------------------------------------------
+
 
 class TestParseFeedURLExtract:
     cfg = {"format": "url_extract", "type": "domain"}
@@ -156,6 +159,7 @@ class TestParseFeedURLExtract:
 # ---------------------------------------------------------------------------
 #   parse_feed — plain_domain
 # ---------------------------------------------------------------------------
+
 
 class TestParseFeedPlainDomain:
     cfg = {"format": "plain_domain", "type": "domain"}

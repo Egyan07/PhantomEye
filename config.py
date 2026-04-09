@@ -32,11 +32,11 @@ FIREWALL_LOG_DAYS = 1
 #   PowerShell (run as Administrator):
 #     [System.Environment]::SetEnvironmentVariable(
 #       'PHANTOMEYE_EMAIL_PASSWORD', 'your_app_password', 'Machine')
-EMAIL_ENABLED     = False
-EMAIL_FROM        = "phantomeye@redparrot.co.uk"
-EMAIL_TO          = "admin@redparrot.co.uk"
+EMAIL_ENABLED = False
+EMAIL_FROM = "phantomeye@redparrot.co.uk"
+EMAIL_TO = "admin@redparrot.co.uk"
 EMAIL_SMTP_SERVER = "smtp.gmail.com"
-EMAIL_SMTP_PORT   = 587
+EMAIL_SMTP_PORT = 587
 
 # IPs to always ignore (private ranges handled automatically in code)
 WHITELIST_IPS = [
@@ -46,11 +46,21 @@ WHITELIST_IPS = [
 
 # Domains to always consider safe (subdomains also matched)
 WHITELIST_DOMAINS = [
-    "microsoft.com", "windows.com", "windowsupdate.com",
-    "office.com", "office365.com", "live.com", "outlook.com",
-    "google.com", "googleapis.com", "gstatic.com",
-    "digicert.com", "verisign.com", "symantec.com",
-    "hmrc.gov.uk", "gov.uk",
+    "microsoft.com",
+    "windows.com",
+    "windowsupdate.com",
+    "office.com",
+    "office365.com",
+    "live.com",
+    "outlook.com",
+    "google.com",
+    "googleapis.com",
+    "gstatic.com",
+    "digicert.com",
+    "verisign.com",
+    "symantec.com",
+    "hmrc.gov.uk",
+    "gov.uk",
 ]
 
 # Alert deduplication window — don't re-alert on the same IOC within this
@@ -61,9 +71,9 @@ ALERT_DEDUPE_HOURS = 24
 ALERT_HISTORY_LIMIT = 500
 
 # Storage paths — change only if necessary
-LOG_DIR   = r"C:\SecurityLogs\PhantomEye"
-DB_PATH   = os.path.join(LOG_DIR, "phantom_eye.db")
-LOG_FILE  = os.path.join(LOG_DIR, "phantom_eye.log")
+LOG_DIR = r"C:\SecurityLogs\PhantomEye"
+DB_PATH = os.path.join(LOG_DIR, "phantom_eye.db")
+LOG_FILE = os.path.join(LOG_DIR, "phantom_eye.log")
 FEEDS_DIR = os.path.join(LOG_DIR, "feeds")
 
 # =============================================================================
@@ -74,52 +84,52 @@ FEEDS_DIR = os.path.join(LOG_DIR, "feeds")
 THREAT_FEEDS = {
     # ---- IP Feeds ----
     "feodo_ips": {
-        "url":    "https://feodotracker.abuse.ch/downloads/ipblocklist.csv",
-        "type":   "ip",
+        "url": "https://feodotracker.abuse.ch/downloads/ipblocklist.csv",
+        "type": "ip",
         "format": "feodo_csv",
-        "label":  "Feodo Tracker (Botnet C2 IPs)",
+        "label": "Feodo Tracker (Botnet C2 IPs)",
     },
     "emerging_threats": {
-        "url":    "https://rules.emergingthreats.net/blockrules/compromised-ips.txt",
-        "type":   "ip",
+        "url": "https://rules.emergingthreats.net/blockrules/compromised-ips.txt",
+        "type": "ip",
         "format": "plain_ip",
-        "label":  "Emerging Threats (Compromised IPs)",
+        "label": "Emerging Threats (Compromised IPs)",
     },
     "cins_score": {
-        "url":    "https://cinsscore.com/list/ci-badguys.txt",
-        "type":   "ip",
+        "url": "https://cinsscore.com/list/ci-badguys.txt",
+        "type": "ip",
         "format": "plain_ip",
-        "label":  "CINS Score (Bad Actor IPs)",
+        "label": "CINS Score (Bad Actor IPs)",
     },
     "abuse_ssl": {
-        "url":    "https://sslbl.abuse.ch/blacklist/sslipblacklist.csv",
-        "type":   "ip",
+        "url": "https://sslbl.abuse.ch/blacklist/sslipblacklist.csv",
+        "type": "ip",
         "format": "abuse_ssl_csv",
-        "label":  "Abuse.ch SSL Blacklist (Malicious SSL IPs)",
+        "label": "Abuse.ch SSL Blacklist (Malicious SSL IPs)",
     },
     # ---- Domain / URL Feeds ----
     "urlhaus_domains": {
-        "url":    "https://urlhaus.abuse.ch/downloads/text/",
-        "type":   "domain",
+        "url": "https://urlhaus.abuse.ch/downloads/text/",
+        "type": "domain",
         "format": "url_extract",
-        "label":  "URLhaus (Malware Download Domains)",
+        "label": "URLhaus (Malware Download Domains)",
     },
     "openphish": {
-        "url":    "https://openphish.com/feed.txt",
-        "type":   "domain",
+        "url": "https://openphish.com/feed.txt",
+        "type": "domain",
         "format": "url_extract",
-        "label":  "OpenPhish (Phishing Domains)",
+        "label": "OpenPhish (Phishing Domains)",
     },
     "botvrij_domains": {
-        "url":    "https://www.botvrij.eu/data/ioclist.domain.raw",
-        "type":   "domain",
+        "url": "https://www.botvrij.eu/data/ioclist.domain.raw",
+        "type": "domain",
         "format": "plain_domain",
-        "label":  "Botvrij.eu (Malicious Domains)",
+        "label": "Botvrij.eu (Malicious Domains)",
     },
     "botvrij_ips": {
-        "url":    "https://www.botvrij.eu/data/ioclist.ip-dst.raw",
-        "type":   "ip",
+        "url": "https://www.botvrij.eu/data/ioclist.ip-dst.raw",
+        "type": "ip",
         "format": "plain_ip",
-        "label":  "Botvrij.eu (Malicious IPs)",
+        "label": "Botvrij.eu (Malicious IPs)",
     },
 }
