@@ -30,6 +30,7 @@ import urllib.request
 from datetime import datetime
 
 from config import DB_PATH, FEEDS_DIR, THREAT_FEEDS
+from custom_feeds import load_custom_feeds
 from logger import log
 from utils import (
     extract_domain_from_url,
@@ -244,8 +245,10 @@ def update_feeds(callback=None) -> int:
     total_new = 0
     total = 0
 
+    all_feeds = {**THREAT_FEEDS, **load_custom_feeds()}
+
     try:
-        for feed_name, feed_config in THREAT_FEEDS.items():
+        for feed_name, feed_config in all_feeds.items():
             label = feed_config["label"]
             if callback:
                 callback(f"Downloading: {label}...")
@@ -325,6 +328,7 @@ def check_stale_feeds() -> list[str]:
     Used by --check CLI mode and the dashboard health indicator.
     """
     stale = []
+    all_feeds = {**THREAT_FEEDS, **load_custom_feeds()}
     try:
         conn = sqlite3.connect(DB_PATH)
         # FIX: conn.close() moved into a finally block so it is always called
@@ -332,7 +336,7 @@ def check_stale_feeds() -> list[str]:
         # try body and was skipped on any exception, leaking the file handle.
         try:
             cur = conn.cursor()
-            for feed_name in THREAT_FEEDS:
+            for feed_name in all_feeds:
                 cur.execute("SELECT status FROM feed_status WHERE feed_name=?", (feed_name,))
                 row = cur.fetchone()
                 if row is None or row[0] != "OK":

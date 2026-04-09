@@ -11,6 +11,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from config import DB_PATH, THREAT_FEEDS
+from custom_feeds import add_custom_feed, load_custom_feeds, remove_custom_feed
 from gui.theme import (
     ACCENT,
     ACCENT2,
@@ -40,8 +41,16 @@ class FeedsTab:
         Tooltip(btn_update, "Download latest threat intelligence from all 8 feeds")
 
         btn_refresh = make_button(btn_row, "🔄 Refresh", self.refresh, "#444")
-        btn_refresh.pack(side=tk.LEFT)
+        btn_refresh.pack(side=tk.LEFT, padx=(0, 8))
         Tooltip(btn_refresh, "Reload feed status from database")
+
+        btn_add = make_button(btn_row, "+  Add Feed", self._add_feed_dialog, ACCENT)
+        btn_add.pack(side=tk.LEFT, padx=(0, 8))
+        Tooltip(btn_add, "Add a custom threat feed URL")
+
+        btn_remove = make_button(btn_row, "\u2212  Remove Feed", self._remove_feed, DANGER)
+        btn_remove.pack(side=tk.LEFT)
+        Tooltip(btn_remove, "Remove selected custom feed")
 
         cols = ("Feed Name", "IOC Count", "Last Updated", "Status")
         widths = (330, 100, 180, 80)
@@ -66,6 +75,60 @@ class FeedsTab:
 
     # -----------------------------------------------------------------------
 
+    def _add_feed_dialog(self) -> None:
+        from tkinter import messagebox, simpledialog
+
+        url = simpledialog.askstring("Add Custom Feed", "Feed URL:", parent=self.parent)
+        if not url or not url.startswith("http"):
+            return
+        label = simpledialog.askstring("Add Custom Feed", "Feed name/label:", parent=self.parent)
+        if not label:
+            return
+        feed_type = simpledialog.askstring("Add Custom Feed", "Feed type (ip or domain):", parent=self.parent)
+        if feed_type not in ("ip", "domain"):
+            messagebox.showerror("PhantomEye", "Type must be 'ip' or 'domain'.")
+            return
+        feed_format = simpledialog.askstring(
+            "Add Custom Feed",
+            "Format (plain_ip, plain_domain, url_extract, feodo_csv, abuse_ssl_csv):",
+            parent=self.parent,
+        )
+        valid_formats = ("plain_ip", "plain_domain", "url_extract", "feodo_csv", "abuse_ssl_csv")
+        if feed_format not in valid_formats:
+            messagebox.showerror("PhantomEye", f"Format must be one of: {', '.join(valid_formats)}")
+            return
+        result = add_custom_feed(label, url, feed_type, feed_format, label)
+        if result:
+            messagebox.showinfo("PhantomEye", f"Custom feed '{label}' added.\nClick 'Update All Feeds' to download it.")
+            self.refresh()
+        else:
+            messagebox.showwarning("PhantomEye", "A feed with that name already exists.")
+
+    def _remove_feed(self) -> None:
+        from tkinter import messagebox
+
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showinfo("PhantomEye", "Select a custom feed to remove.")
+            return
+        item = self.tree.item(selected[0])
+        feed_label = item["values"][0]
+        if not str(feed_label).startswith("[Custom]"):
+            messagebox.showinfo("PhantomEye", "Only custom feeds can be removed.")
+            return
+        # Find the key
+        custom = load_custom_feeds()
+        key = None
+        for k, v in custom.items():
+            if v.get("label") == feed_label:
+                key = k
+                break
+        if key and messagebox.askyesno("PhantomEye", f"Remove custom feed '{feed_label}'?"):
+            remove_custom_feed(key)
+            self.refresh()
+
+    # -----------------------------------------------------------------------
+
     def refresh(self) -> None:
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -75,7 +138,14 @@ class FeedsTab:
                 self.tree.insert(
                     "",
                     tk.END,
-                    values=(cfg["label"], "—", "Not downloaded", "PENDING"),
+                    values=(cfg["label"], "\u2014", "Not downloaded", "PENDING"),
+                    tags=("pending",),
+                )
+            for _feed_name, cfg in load_custom_feeds().items():
+                self.tree.insert(
+                    "",
+                    tk.END,
+                    values=(cfg["label"], "\u2014", "Not downloaded", "PENDING"),
                     tags=("pending",),
                 )
             return
@@ -108,7 +178,37 @@ class FeedsTab:
                     self.tree.insert(
                         "",
                         tk.END,
-                        values=(cfg["label"], "—", "Not downloaded", "PENDING"),
+                        values=(cfg["label"], "\u2014", "Not downloaded", "PENDING"),
+                        tags=("pending",),
+                    )
+
+            # Custom feeds
+            custom = load_custom_feeds()
+            for feed_name, cfg in custom.items():
+                cur.execute(
+                    "SELECT ioc_count, last_updated, status FROM feed_status WHERE feed_name=?",
+                    (feed_name,),
+                )
+                row = cur.fetchone()
+                if row:
+                    count, updated, status = row
+                    tag = "ok" if status == "OK" else "failed"
+                    self.tree.insert(
+                        "",
+                        tk.END,
+                        values=(
+                            cfg["label"],
+                            f"{count:,}",
+                            updated[:16] if updated else "\u2014",
+                            status,
+                        ),
+                        tags=(tag,),
+                    )
+                else:
+                    self.tree.insert(
+                        "",
+                        tk.END,
+                        values=(cfg["label"], "\u2014", "Not downloaded", "PENDING"),
                         tags=("pending",),
                     )
 
