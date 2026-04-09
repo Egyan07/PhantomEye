@@ -6,6 +6,7 @@
 #   Assembles all tabs and owns the header / status bar.
 # =============================================================================
 
+import os
 import tkinter as tk
 from tkinter import ttk
 
@@ -59,13 +60,19 @@ class PhantomEyeApp:
         hdr.pack(fill=tk.X)
         hdr.pack_propagate(False)
 
+        # Load header image if available
+        header_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "header.png")
+        if os.path.exists(header_path):
+            self._header_img = tk.PhotoImage(file=header_path)
+            tk.Label(hdr, image=self._header_img, bg=PANEL).pack(side=tk.LEFT)
+
         tk.Label(
             hdr,
-            text="👁  PhantomEye",
+            text="  PhantomEye",
             font=("Consolas", 18, "bold"),
             bg=PANEL,
             fg=ACCENT,
-        ).pack(side=tk.LEFT, padx=18, pady=10)
+        ).pack(side=tk.LEFT, padx=(4, 0), pady=10)
 
         tk.Label(
             hdr,
@@ -73,7 +80,7 @@ class PhantomEyeApp:
             font=("Consolas", 9),
             bg=PANEL,
             fg=MUTED,
-        ).pack(side=tk.LEFT, pady=10)
+        ).pack(side=tk.LEFT, padx=(8, 0), pady=10)
 
     # -----------------------------------------------------------------------
     #   Tabs

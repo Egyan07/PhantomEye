@@ -42,8 +42,9 @@ echo  [2/5] PhantomEye uses only Python built-in libraries. No pip required.
 echo.
 
 echo  [3/5] Creating directories...
-if not exist "C:\SecurityLogs\PhantomEye\feeds" mkdir "C:\SecurityLogs\PhantomEye\feeds"
-if not exist "C:\SecurityLogs\PhantomEye\gui"   mkdir "C:\SecurityLogs\PhantomEye\gui"
+if not exist "C:\SecurityLogs\PhantomEye\feeds"  mkdir "C:\SecurityLogs\PhantomEye\feeds"
+if not exist "C:\SecurityLogs\PhantomEye\gui"    mkdir "C:\SecurityLogs\PhantomEye\gui"
+if not exist "C:\SecurityLogs\PhantomEye\assets" mkdir "C:\SecurityLogs\PhantomEye\assets"
 echo  Directories ready.
 echo.
 
@@ -66,6 +67,8 @@ copy /Y "%~dp0gui\tab_alerts.py"    "C:\SecurityLogs\PhantomEye\gui\tab_alerts.p
 copy /Y "%~dp0gui\tab_feeds.py"     "C:\SecurityLogs\PhantomEye\gui\tab_feeds.py"     >nul
 copy /Y "%~dp0gui\tab_monitor.py"  "C:\SecurityLogs\PhantomEye\gui\tab_monitor.py"  >nul
 copy /Y "%~dp0gui\tooltip.py"      "C:\SecurityLogs\PhantomEye\gui\tooltip.py"      >nul
+:: Copy assets
+copy /Y "%~dp0assets\header.png"   "C:\SecurityLogs\PhantomEye\assets\header.png"   >nul
 echo  All modules copied.
 echo.
 
