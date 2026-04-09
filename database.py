@@ -65,6 +65,12 @@ def init_database() -> None:
             )
         """)
 
+        # Indexes for frequently-queried columns
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_iocs_value ON iocs(value)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_iocs_type_value ON iocs(type, value)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ioc_value ON alerts(ioc_value)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp)")
+
         conn.commit()
     finally:
         conn.close()
