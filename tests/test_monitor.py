@@ -89,6 +89,26 @@ Active Connections
 """
         assert _parse_netstat(header_only) == []
 
+    def test_udp_lines_ignored(self):
+        """Lines starting with UDP should not be parsed (TCP regex only)."""
+        output = """\
+  UDP    192.168.1.10:54321     185.234.1.1:443
+  TCP    192.168.1.10:54322     8.8.8.8:443            ESTABLISHED
+"""
+        result = _parse_netstat(output)
+        assert len(result) == 1
+        assert result[0]["remote_ip"] == "8.8.8.8"
+
+    def test_ipv6_lines_ignored(self):
+        """Lines with IPv6 addresses should be filtered out (no dotted-quad match)."""
+        output = """\
+  TCP    [::1]:54321            [::1]:443              ESTABLISHED
+  TCP    192.168.1.10:54322     8.8.8.8:443            ESTABLISHED
+"""
+        result = _parse_netstat(output)
+        assert len(result) == 1
+        assert result[0]["remote_ip"] == "8.8.8.8"
+
 
 # ---------------------------------------------------------------------------
 #   check_connections
@@ -134,6 +154,27 @@ class TestCheckConnections:
         with patch("monitor.is_ioc_known", return_value=False):
             threats = check_connections(connections)
         assert threats == []
+
+    def test_returns_threat_flag(self):
+        """Returned threat dicts should have threat: True."""
+        connections = [
+            {"remote_ip": "185.234.1.1", "remote_port": "443", "state": "ESTABLISHED"},
+        ]
+        with patch("monitor.is_ioc_known", return_value=True):
+            threats = check_connections(connections)
+        assert len(threats) == 1
+        assert threats[0]["threat"] is True
+
+    def test_preserves_connection_fields(self):
+        """Returned threats should still contain all original connection fields."""
+        connections = [
+            {"remote_ip": "185.234.1.1", "remote_port": "443", "state": "ESTABLISHED"},
+        ]
+        with patch("monitor.is_ioc_known", return_value=True):
+            threats = check_connections(connections)
+        assert threats[0]["remote_ip"] == "185.234.1.1"
+        assert threats[0]["remote_port"] == "443"
+        assert threats[0]["state"] == "ESTABLISHED"
 
 
 # ---------------------------------------------------------------------------

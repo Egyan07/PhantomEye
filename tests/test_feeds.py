@@ -183,3 +183,78 @@ class TestParseFeedPlainDomain:
         # but only the final check should run now — verify no double-call error
         result = parse_feed(content, "botvrij", self.cfg)
         assert "evil.ru" in result
+
+
+# ---------------------------------------------------------------------------
+#   parse_feed — abuse_ssl_csv
+# ---------------------------------------------------------------------------
+
+
+class TestParseFeedAbuseSSLCSV:
+    cfg = {"format": "abuse_ssl_csv", "type": "ip"}
+
+    def test_parse_feed_abuse_ssl_csv(self):
+        """abuse_ssl_csv format should extract IPs from column 1."""
+        content = "# Listingdate,DstIP,DstPort\n2024-01-01,185.234.1.1,443\n"
+        result = parse_feed(content, "abuse_ssl", self.cfg)
+        assert "185.234.1.1" in result
+
+
+# ---------------------------------------------------------------------------
+#   Additional parse_feed edge-case tests
+# ---------------------------------------------------------------------------
+
+
+class TestParseFeedEdgeCases:
+    def test_parse_feed_with_whitespace_lines(self):
+        """Lines with only whitespace should be skipped."""
+        cfg = {"format": "plain_ip", "type": "ip"}
+        content = "  \n  \n1.2.3.4\n"
+        result = parse_feed(content, "test", cfg)
+        assert result == ["1.2.3.4"]
+
+    def test_parse_feed_all_private_ips_returns_empty(self):
+        """Content with only private IPs should return an empty list."""
+        cfg = {"format": "plain_ip", "type": "ip"}
+        content = "192.168.1.1\n10.0.0.1\n172.16.0.1\n"
+        result = parse_feed(content, "test", cfg)
+        assert result == []
+
+    def test_parse_feed_mixed_valid_invalid(self):
+        """Only valid, public IPs should survive parsing."""
+        cfg = {"format": "plain_ip", "type": "ip"}
+        content = "not-an-ip\n999.999.999.999\n1.2.3.4\nhello world\n8.8.8.8\n"
+        result = parse_feed(content, "test", cfg)
+        assert "1.2.3.4" in result
+        assert "8.8.8.8" in result
+        assert "not-an-ip" not in result
+        assert "999.999.999.999" not in result
+        assert len(result) == 2
+
+    def test_detect_ip_column_generic_ipaddress(self):
+        """Header containing 'ipaddress' column should be detected."""
+        lines = ["# date,ipaddress,port"]
+        assert _detect_ip_column(lines, "feodo_csv") == 1
+
+    def test_parse_feed_url_extract_no_scheme(self):
+        """URLs without http:// scheme may not parse as domains."""
+        cfg = {"format": "url_extract", "type": "domain"}
+        content = "evil.ru/malware.exe\n"
+        # extract_domain_from_url expects a scheme; bare paths may not extract
+        result = parse_feed(content, "urlhaus", cfg)
+        # Should either extract or return empty — must not crash
+        assert isinstance(result, list)
+
+    def test_parse_feed_plain_domain_with_dots(self):
+        """Trailing dots on domains should be stripped."""
+        cfg = {"format": "plain_domain", "type": "domain"}
+        content = "evil.ru.\n"
+        result = parse_feed(content, "botvrij", cfg)
+        assert "evil.ru" in result
+
+    def test_parse_feed_empty_lines_only(self):
+        """Content of just newlines should return an empty list."""
+        cfg = {"format": "plain_ip", "type": "ip"}
+        content = "\n\n\n"
+        result = parse_feed(content, "test", cfg)
+        assert result == []

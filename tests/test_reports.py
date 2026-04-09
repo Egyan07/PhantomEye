@@ -199,3 +199,68 @@ class TestGenerateAlertReport:
             html = f.read()
         assert "10.20.30.40" in html
         assert "evil.example.com" in html
+
+    def test_report_contains_timestamp(self, tmp_path):
+        """Report HTML should include a generation timestamp."""
+        db_path, conn = _make_tmp_db(tmp_path)
+        conn.close()
+
+        out = str(tmp_path / "report.html")
+        with patch("reports.DB_PATH", db_path):
+            from reports import generate_alert_report
+
+            generate_alert_report(out)
+        with open(out, encoding="utf-8") as f:
+            html = f.read()
+        assert "Generated:" in html
+
+    def test_report_utf8_encoding(self, tmp_path):
+        """Output file should be valid UTF-8."""
+        db_path, conn = _make_tmp_db(tmp_path)
+        _insert_alert(conn, ioc_value="caf\u00e9.example.com")
+        conn.close()
+
+        out = str(tmp_path / "report.html")
+        with patch("reports.DB_PATH", db_path):
+            from reports import generate_alert_report
+
+            generate_alert_report(out)
+        with open(out, encoding="utf-8") as f:
+            html = f.read()
+        assert "caf\u00e9.example.com" in html
+
+
+# ---- TestBuildHTML — additional tests -----------------------------------------
+
+
+class TestBuildHTMLExtended:
+    def test_multiple_alerts_all_rendered(self):
+        """All 5 alerts should appear in the rendered HTML."""
+        alerts = [
+            (f"2026-04-09 12:0{i}:00", "CRITICAL", "Feed Match", f"10.0.0.{i}", "ip", "feodo", "FW", "d")
+            for i in range(5)
+        ]
+        html = _build_html(alerts)
+        for i in range(5):
+            assert f"10.0.0.{i}" in html
+        assert "Total alerts: 5" in html
+
+    def test_special_chars_in_all_fields(self):
+        """Special characters in every field should be escaped."""
+        alerts = [
+            (
+                "2026-04-09 <12:00:00>",
+                "CRITICAL & HIGH",
+                '<script>alert("xss")</script>',
+                '1.2.3.4"',
+                "ip & domain",
+                "test<feed>",
+                'ctx"ctx',
+                "d",
+            ),
+        ]
+        html = _build_html(alerts)
+        assert "<script>" not in html
+        assert "&lt;script&gt;" in html
+        assert "&amp;" in html
+        assert "&quot;" in html

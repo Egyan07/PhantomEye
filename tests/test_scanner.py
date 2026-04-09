@@ -306,6 +306,30 @@ class TestFirewallScanner:
         src_hits = [h for h in hits if h["direction"] == "inbound" and h["ioc"] == "192.168.1.10"]
         assert len(src_hits) == 0
 
+    def test_malformed_date_skipped(self, tmp_path):
+        """A log line with an invalid date format should be silently skipped."""
+        _write_firewall_log(
+            tmp_path,
+            [
+                "NOT-A-DATE NOT-A-TIME ALLOW TCP 192.168.1.10 185.234.1.1 54321 443",
+            ],
+        )
+        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
+            hits = scan_firewall_logs()
+        assert hits == []
+
+    def test_short_line_skipped(self, tmp_path):
+        """A line with fewer than 6 fields should be silently skipped."""
+        _write_firewall_log(
+            tmp_path,
+            [
+                "2024-01-01 12:00:00 ALLOW TCP",
+            ],
+        )
+        with patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE):
+            hits = scan_firewall_logs()
+        assert hits == []
+
 
 # ===========================================================================
 #   Task 2 — DNS cache scanner (7 tests)
@@ -393,6 +417,29 @@ class TestDNSCacheScanner:
         ):
             hits = scan_dns_cache()
         assert len(hits) == 1
+
+    def test_invalid_domains_filtered(self, tmp_path):
+        """Non-domain strings in DNS output should be skipped."""
+        ps_output = "not a domain\n12345\n....\nevil.ru\n"
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=self._mock_ps_result(ps_output)),
+        ):
+            hits = scan_dns_cache()
+        assert len(hits) == 1
+        assert hits[0]["ioc"] == "evil.ru"
+
+    def test_stderr_warning_logged(self, tmp_path):
+        """Non-zero return code with stderr should not crash."""
+        ps_result = self._mock_ps_result(stdout="evil.ru\n", returncode=1, stderr="some warning")
+        with (
+            patch("lookup.get_ioc_cache", return_value=SAMPLE_CACHE),
+            patch("scanner.subprocess.run", return_value=ps_result),
+        ):
+            hits = scan_dns_cache()
+        # Should still parse the stdout successfully
+        assert len(hits) == 1
+        assert hits[0]["ioc"] == "evil.ru"
 
 
 # ===========================================================================
@@ -526,3 +573,23 @@ class TestEmailHeaderAnalyser:
         assert "IPs found     : 2" in report
         assert "185.234.1.1" in report
         assert "MALICIOUS" in report
+
+    def test_no_from_header(self, tmp_path):
+        """Headers without a From: line should still produce a valid report."""
+        headers = "Received: from relay.example.com (1.2.3.4) by mx.example.com\nSubject: Test\n"
+        with patch("lookup.get_ioc_cache", return_value=EMPTY_CACHE):
+            report = analyse_email_headers(headers)
+        assert "PhantomEye" in report
+        assert "VERDICT" in report
+
+    def test_unicode_in_headers(self, tmp_path):
+        """UTF-8 characters in headers should not crash the analyser."""
+        headers = (
+            "Received: from relay.example.com (1.2.3.4) by mx.example.com\n"
+            "From: =?UTF-8?B?w6nDqA==?= <user@example.com>\n"
+            "Subject: Re: Caf\u00e9 meeting\n"
+        )
+        with patch("lookup.get_ioc_cache", return_value=EMPTY_CACHE):
+            report = analyse_email_headers(headers)
+        assert "PhantomEye" in report
+        assert "VERDICT" in report

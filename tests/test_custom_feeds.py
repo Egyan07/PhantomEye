@@ -69,6 +69,22 @@ class TestLoadCustomFeeds:
         result = load_custom_feeds()
         assert result == {}
 
+    def test_permission_error_returns_empty(self, tmp_path):
+        """PermissionError when opening the file should return empty dict."""
+        path = tmp_path / "custom_feeds.json"
+        path.write_text(json.dumps({"x": {}}), encoding="utf-8")
+        with patch("builtins.open", side_effect=PermissionError("Access denied")):
+            # load_custom_feeds checks os.path.exists first, so we need the file
+            result = load_custom_feeds()
+        assert result == {}
+
+    def test_empty_file_returns_empty(self, tmp_path):
+        """A file with empty string content should return empty dict."""
+        path = tmp_path / "custom_feeds.json"
+        path.write_text("", encoding="utf-8")
+        result = load_custom_feeds()
+        assert result == {}
+
 
 # ---------------------------------------------------------------------------
 #   save_custom_feeds
@@ -102,6 +118,26 @@ class TestAddCustomFeed:
         add_custom_feed("Test", "http://a.com", "ip", "plain_ip", "Test")
         result = add_custom_feed("Test", "http://b.com", "ip", "plain_ip", "Test")
         assert result is False
+
+    def test_key_generation(self, tmp_path):
+        """Name 'My Test Feed' should generate key 'custom_my_test_feed'."""
+        add_custom_feed("My Test Feed", "http://example.com", "ip", "plain_ip", "My Test Feed")
+        feeds = load_custom_feeds()
+        assert "custom_my_test_feed" in feeds
+
+    def test_label_prefixed(self, tmp_path):
+        """Added feed label should start with '[Custom]'."""
+        add_custom_feed("Abc", "http://example.com", "ip", "plain_ip", "Abc")
+        feeds = load_custom_feeds()
+        assert feeds["custom_abc"]["label"].startswith("[Custom]")
+
+    def test_preserves_existing(self, tmp_path):
+        """Adding a second feed should not delete the first."""
+        add_custom_feed("First", "http://first.com", "ip", "plain_ip", "First")
+        add_custom_feed("Second", "http://second.com", "ip", "plain_ip", "Second")
+        feeds = load_custom_feeds()
+        assert "custom_first" in feeds
+        assert "custom_second" in feeds
 
 
 # ---------------------------------------------------------------------------
