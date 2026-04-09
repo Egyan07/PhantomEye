@@ -14,6 +14,7 @@ from gui.tab_dashboard import DashboardTab
 from gui.tab_email import EmailTab
 from gui.tab_feeds import FeedsTab
 from gui.tab_lookup import LookupTab
+from gui.tab_monitor import MonitorTab
 from gui.theme import ACCENT, ACCENT2, BG, FG, MUTED, PANEL
 
 
@@ -92,12 +93,14 @@ class PhantomEyeApp:
         f_email = tk.Frame(self.notebook, bg=BG)
         f_alerts = tk.Frame(self.notebook, bg=BG)
         f_feeds = tk.Frame(self.notebook, bg=BG)
+        f_monitor = tk.Frame(self.notebook, bg=BG)
 
         self.notebook.add(f_dashboard, text=" Dashboard ")
         self.notebook.add(f_lookup, text=" IP / Domain Lookup ")
         self.notebook.add(f_email, text=" Email Header Analyser ")
         self.notebook.add(f_alerts, text=" Alert History ")
         self.notebook.add(f_feeds, text=" Feed Status ")
+        self.notebook.add(f_monitor, text=" Connection Monitor ")
 
         # Instantiate tab controllers
         self.dashboard_tab = DashboardTab(f_dashboard)
@@ -108,6 +111,7 @@ class PhantomEyeApp:
             f_feeds,
             run_update_fn=self.dashboard_tab._run_update_feeds,
         )
+        self.monitor_tab = MonitorTab(f_monitor)
 
         # Refresh alerts and feeds when their tabs are selected
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_change)
