@@ -18,12 +18,12 @@ from gui.theme import (
 
 
 class FeedsTab:
-    def __init__(self, parent: tk.Frame, run_update_fn):
+    def __init__(self, parent: tk.Frame, run_update_fn) -> None:
         self.parent        = parent
         self.run_update_fn = run_update_fn
         self._build()
 
-    def _build(self):
+    def _build(self) -> None:
         t = self.parent
 
         btn_row = tk.Frame(t, bg=BG)
@@ -56,7 +56,7 @@ class FeedsTab:
 
     # -----------------------------------------------------------------------
 
-    def refresh(self):
+    def refresh(self) -> None:
         for item in self.tree.get_children():
             self.tree.delete(item)
 

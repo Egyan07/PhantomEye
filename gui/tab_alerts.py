@@ -25,11 +25,11 @@ from gui.theme import (
 
 
 class AlertsTab:
-    def __init__(self, parent: tk.Frame):
+    def __init__(self, parent: tk.Frame) -> None:
         self.parent = parent
         self._build()
 
-    def _build(self):
+    def _build(self) -> None:
         t = self.parent
 
         btn_row = tk.Frame(t, bg=BG)
@@ -61,7 +61,7 @@ class AlertsTab:
 
     # -----------------------------------------------------------------------
 
-    def refresh(self):
+    def refresh(self) -> None:
         for item in self.tree.get_children():
             self.tree.delete(item)
         if not os.path.exists(DB_PATH):
@@ -81,7 +81,7 @@ class AlertsTab:
             from logger import log
             log.warning("Alert history refresh error: %s", e)
 
-    def _clear_alerts(self):
+    def _clear_alerts(self) -> None:
         if not messagebox.askyesno("PhantomEye", "Clear all alert history from database?"):
             return
         try:
@@ -93,7 +93,7 @@ class AlertsTab:
         except Exception as e:
             messagebox.showerror("PhantomEye", f"Could not clear alerts: {e}")
 
-    def _export_csv(self):
+    def _export_csv(self) -> None:
         if not os.path.exists(DB_PATH):
             messagebox.showinfo("PhantomEye", "No database found.")
             return

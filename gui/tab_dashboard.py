@@ -29,12 +29,12 @@ from gui.theme import (
 
 
 class DashboardTab:
-    def __init__(self, parent: tk.Frame):
+    def __init__(self, parent: tk.Frame) -> None:
         self.parent = parent
         self._last_scan = "Never"
         self._build()
 
-    def _build(self):
+    def _build(self) -> None:
         t = self.parent
 
         # --- Stats row ---
@@ -83,7 +83,7 @@ class DashboardTab:
     #   Public
     # -----------------------------------------------------------------------
 
-    def refresh(self):
+    def refresh(self) -> None:
         """Refresh all stat cards from the database."""
         if not os.path.exists(DB_PATH):
             return
@@ -119,14 +119,14 @@ class DashboardTab:
             from logger import log
             log.warning("Dashboard refresh error: %s", e)
 
-    def write(self, msg: str, tag: str = ""):
+    def write(self, msg: str, tag: str = "") -> None:
         self._write(msg, tag)
 
     # -----------------------------------------------------------------------
     #   Internal
     # -----------------------------------------------------------------------
 
-    def _stat_card(self, parent, label: str, value: str, colour: str) -> tk.Label:
+    def _stat_card(self, parent: tk.Frame, label: str, value: str, colour: str) -> tk.Label:
         card = tk.Frame(parent, bg=PANEL, relief=tk.FLAT, bd=1)
         card.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=5)
         tk.Label(card, text=label, bg=PANEL, fg=MUTED,
@@ -136,14 +136,14 @@ class DashboardTab:
         lbl.pack(pady=(0, 8))
         return lbl
 
-    def _write(self, msg: str, tag: str = ""):
+    def _write(self, msg: str, tag: str = "") -> None:
         self.console.config(state=tk.NORMAL)
         ts = datetime.now().strftime("%H:%M:%S")
         self.console.insert(tk.END, f"[{ts}] {msg}\n", tag)
         self.console.see(tk.END)
         self.console.config(state=tk.DISABLED)
 
-    def _run_update_feeds(self):
+    def _run_update_feeds(self) -> None:
         def task():
             self._write("Starting feed update...", "info")
             try:
@@ -154,7 +154,7 @@ class DashboardTab:
                 self._write(f"Feed update error: {e}", "hit")
         threading.Thread(target=task, daemon=True).start()
 
-    def _run_firewall_scan(self):
+    def _run_firewall_scan(self) -> None:
         def task():
             self._write("Scanning Windows Firewall logs...", "info")
             hits = scan_firewall_logs(
@@ -176,7 +176,7 @@ class DashboardTab:
                 self._write("  No malicious IPs found in firewall log.", "ok")
         threading.Thread(target=task, daemon=True).start()
 
-    def _run_dns_scan(self):
+    def _run_dns_scan(self) -> None:
         def task():
             self._write("Scanning DNS cache...", "info")
             hits = scan_dns_cache(

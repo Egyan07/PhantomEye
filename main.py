@@ -38,6 +38,7 @@
 #     - NEW: check_stale_feeds() used by --check and Dashboard health card
 # =============================================================================
 
+import argparse
 import sys
 import traceback
 
@@ -52,7 +53,7 @@ from alerts   import record_alert
 VERSION = "1.2"
 
 
-def _print_banner():
+def _print_banner() -> None:
     from datetime import datetime
     print()
     print("=" * 65)
@@ -63,8 +64,7 @@ def _print_banner():
     print()
 
 
-def _build_arg_parser():
-    import argparse
+def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="main",
         description=f"PhantomEye v{VERSION} — Threat Intelligence Platform\n"
@@ -99,7 +99,7 @@ def _build_arg_parser():
     return parser
 
 
-def main():
+def main() -> None:
     _print_banner()
 
     # No arguments → launch GUI directly (double-click / shortcut use)
@@ -145,7 +145,7 @@ def main():
         print(format_lookup_result(result))
 
 
-def _run_check():
+def _run_check() -> None:
     """
     Validate config, DB connectivity, and feed health.
     Exits with code 0 (all OK) or 1 (issues found).
@@ -208,7 +208,7 @@ def _run_check():
         sys.exit(0)
 
 
-def _launch_gui():
+def _launch_gui() -> None:
     """Launch GUI after initialising DB and cache (called when no CLI args)."""
     import tkinter as tk
     from gui.app import PhantomEyeApp
@@ -221,7 +221,7 @@ def _launch_gui():
     root.mainloop()
 
 
-def _launch_gui_no_reinit():
+def _launch_gui_no_reinit() -> None:
     """
     Launch GUI when init_database/load_ioc_cache have already been called
     by main() — avoids the double-init that existed in v1.0/v1.1.

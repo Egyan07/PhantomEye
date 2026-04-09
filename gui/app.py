@@ -23,7 +23,7 @@ class PhantomEyeApp:
     Coded by Egyan | Red Parrot Accounting Ltd
     """
 
-    def __init__(self, root: tk.Tk):
+    def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title(
             "👁  PhantomEye v1.2  |  Coded by Egyan  |  Red Parrot Accounting Ltd"
@@ -43,7 +43,7 @@ class PhantomEyeApp:
     #   Header
     # -----------------------------------------------------------------------
 
-    def _build_header(self):
+    def _build_header(self) -> None:
         hdr = tk.Frame(self.root, bg=PANEL, height=55)
         hdr.pack(fill=tk.X)
         hdr.pack_propagate(False)
@@ -65,7 +65,7 @@ class PhantomEyeApp:
     #   Tabs
     # -----------------------------------------------------------------------
 
-    def _build_tabs(self):
+    def _build_tabs(self) -> None:
         style = ttk.Style()
         style.theme_use("default")
         style.configure("TNotebook",     background=BG,    borderwidth=0)
@@ -113,7 +113,7 @@ class PhantomEyeApp:
     #   Status bar
     # -----------------------------------------------------------------------
 
-    def _build_status_bar(self):
+    def _build_status_bar(self) -> None:
         self._status_var = tk.StringVar(
             value="Ready — PhantomEye v1.2 | Red Parrot Accounting Ltd"
         )
@@ -125,7 +125,7 @@ class PhantomEyeApp:
             anchor="w", padx=10,
         ).pack(side=tk.BOTTOM, fill=tk.X)
 
-    def set_status(self, msg: str):
+    def set_status(self, msg: str) -> None:
         self._status_var.set(msg)
         self.root.update_idletasks()
 
@@ -133,7 +133,7 @@ class PhantomEyeApp:
     #   Tab switch handler
     # -----------------------------------------------------------------------
 
-    def _on_tab_change(self, _event):
+    def _on_tab_change(self, _event: tk.Event) -> None:
         selected = self.notebook.index(self.notebook.select())
         if selected == 3:   # Alert History
             self.alerts_tab.refresh()

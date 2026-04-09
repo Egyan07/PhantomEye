@@ -57,7 +57,7 @@ def make_scrolled_text(parent, height: int = 14, readonly: bool = False) -> tk.T
 
 
 def make_label(parent, text: str, size: int = 10,
-               colour: str = None, bold: bool = False) -> tk.Label:
+               colour: str | None = None, bold: bool = False) -> tk.Label:
     weight = "bold" if bold else "normal"
     return tk.Label(
         parent, text=text,

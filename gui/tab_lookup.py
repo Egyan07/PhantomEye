@@ -21,12 +21,12 @@ from gui.theme import (
 
 
 class LookupTab:
-    def __init__(self, parent: tk.Frame, set_status_fn):
+    def __init__(self, parent: tk.Frame, set_status_fn) -> None:
         self.parent     = parent
         self.set_status = set_status_fn
         self._build()
 
-    def _build(self):
+    def _build(self) -> None:
         t = self.parent
 
         tk.Label(
@@ -89,7 +89,7 @@ class LookupTab:
 
     # -----------------------------------------------------------------------
 
-    def _do_lookup(self):
+    def _do_lookup(self) -> None:
         value = self.entry.get().strip()
         if not value or "e.g." in value:
             messagebox.showinfo("PhantomEye", "Please enter an IP address or domain.")
@@ -111,7 +111,7 @@ class LookupTab:
 
         threading.Thread(target=task, daemon=True).start()
 
-    def _show_result(self, text: str, tag: str, value: str, found: bool):
+    def _show_result(self, text: str, tag: str, value: str, found: bool) -> None:
         self.result_box.config(state=tk.NORMAL)
         self.result_box.delete("1.0", tk.END)
         self.result_box.insert(tk.END, text, tag)

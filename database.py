@@ -15,7 +15,7 @@ from config import DB_PATH
 from logger import log
 
 
-def init_database():
+def init_database() -> None:
     """Create all tables if they do not already exist."""
     # FIX: wrap in try/finally so the connection is always closed even if
     # a CREATE TABLE statement raises (e.g. DB path not writable).

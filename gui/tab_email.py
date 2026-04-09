@@ -21,12 +21,12 @@ from gui.theme import (
 
 
 class EmailTab:
-    def __init__(self, parent: tk.Frame, set_status_fn):
+    def __init__(self, parent: tk.Frame, set_status_fn) -> None:
         self.parent     = parent
         self.set_status = set_status_fn
         self._build()
 
-    def _build(self):
+    def _build(self) -> None:
         t = self.parent
 
         tk.Label(
@@ -82,7 +82,7 @@ class EmailTab:
 
     # -----------------------------------------------------------------------
 
-    def _do_analysis(self):
+    def _do_analysis(self) -> None:
         headers = self.input_box.get("1.0", tk.END).strip()
         if not headers:
             messagebox.showinfo("PhantomEye", "Please paste email headers first.")
@@ -105,7 +105,7 @@ class EmailTab:
 
         threading.Thread(target=task, daemon=True).start()
 
-    def _show_result(self, report: str, tag: str):
+    def _show_result(self, report: str, tag: str) -> None:
         self.result_box.config(state=tk.NORMAL)
         self.result_box.delete("1.0", tk.END)
         self.result_box.insert(tk.END, report, tag)
