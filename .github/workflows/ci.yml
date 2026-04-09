@@ -29,7 +29,7 @@ jobs:
         run: pytest tests/ -v --cov=. --cov-report=term-missing
 
       - name: Verify no syntax errors in all modules
-        run: python -m py_compile alerts.py config.py database.py feeds.py logger.py lookup.py main.py scanner.py utils.py gui/app.py gui/tab_alerts.py gui/tab_dashboard.py gui/tab_email.py gui/tab_feeds.py gui/tab_lookup.py gui/theme.py
+        run: python -m py_compile alerts.py config.py custom_feeds.py database.py feeds.py geolocation.py logger.py lookup.py main.py monitor.py reports.py scanner.py utils.py gui/app.py gui/tab_alerts.py gui/tab_dashboard.py gui/tab_email.py gui/tab_feeds.py gui/tab_lookup.py gui/tab_monitor.py gui/theme.py gui/tooltip.py
 
   lint:
     name: Lint (Ruff)

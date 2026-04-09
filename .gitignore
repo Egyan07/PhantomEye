@@ -1,6 +1,9 @@
 # Database — may contain real alert history from your network
 *.db
 
+# Custom feeds config — user-specific
+custom_feeds.json
+
 # Logs
 *.log
 

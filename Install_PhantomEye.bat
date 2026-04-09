@@ -1,6 +1,6 @@
 @echo off
 :: =============================================================================
-::  PhantomEye v1.2 — Installer
+::  PhantomEye v2.1.0 — Installer
 ::  Red Parrot Accounting Ltd
 ::
 ::  What this does:
@@ -12,11 +12,11 @@
 ::    6. Launches the GUI
 :: =============================================================================
 
-title PhantomEye v1.2 — Installer
+title PhantomEye v2.1.0 — Installer
 
 echo.
 echo  ============================================================
-echo   PhantomEye v1.2 — Threat Intelligence Platform
+echo   PhantomEye v2.1.0 — Threat Intelligence Platform
 echo   Red Parrot Accounting Ltd
 echo  ============================================================
 echo.
@@ -48,7 +48,7 @@ echo  Directories ready.
 echo.
 
 echo  [4/5] Copying PhantomEye modules...
-for %%f in (main.py config.py logger.py database.py utils.py feeds.py lookup.py alerts.py scanner.py) do (
+for %%f in (main.py config.py logger.py database.py utils.py feeds.py lookup.py alerts.py scanner.py geolocation.py reports.py monitor.py custom_feeds.py) do (
     copy /Y "%~dp0%%f" "C:\SecurityLogs\PhantomEye\%%f" >nul
     if %errorlevel% neq 0 (
         echo  [ERROR] Could not copy %%f
@@ -64,6 +64,8 @@ copy /Y "%~dp0gui\tab_lookup.py"    "C:\SecurityLogs\PhantomEye\gui\tab_lookup.p
 copy /Y "%~dp0gui\tab_email.py"     "C:\SecurityLogs\PhantomEye\gui\tab_email.py"     >nul
 copy /Y "%~dp0gui\tab_alerts.py"    "C:\SecurityLogs\PhantomEye\gui\tab_alerts.py"    >nul
 copy /Y "%~dp0gui\tab_feeds.py"     "C:\SecurityLogs\PhantomEye\gui\tab_feeds.py"     >nul
+copy /Y "%~dp0gui\tab_monitor.py"  "C:\SecurityLogs\PhantomEye\gui\tab_monitor.py"  >nul
+copy /Y "%~dp0gui\tooltip.py"      "C:\SecurityLogs\PhantomEye\gui\tooltip.py"      >nul
 echo  All modules copied.
 echo.
 

@@ -1,4 +1,4 @@
-# PhantomEye v1.2 — Red Parrot Accounting Ltd
+# PhantomEye v2.1.0 — Red Parrot Accounting Ltd
 #
 # This project uses only Python standard library modules.
 # Python 3.10 or newer is required.

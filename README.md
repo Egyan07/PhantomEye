@@ -114,7 +114,7 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Tooltips | Hover tooltips on every action button |
 | CodeQL SAST | Automated security scanning on every push |
 | Security tests | 18 input validation tests covering path traversal, injection, and oversized input |
-| Clean architecture | 14 focused modules — no 1,000-line files |
+| Clean architecture | 23 focused modules — no 1,000-line files |
 
 ---
 
@@ -187,7 +187,7 @@ pytest tests/ -v
 | Monitor | `test_monitor.py` | Netstat parsing, connection monitoring, IOC checks |
 | Custom Feeds | `test_custom_feeds.py` | Custom feed CRUD, validation, persistence (9 tests) |
 | Security | `test_security.py` | Path traversal, injection, oversized input validation (18 tests) |
-| CLI | `test_cli.py` | Argument parsing, version flag, check mode, banner output |
+| CLI | `test_main.py` | Argument parsing, version flag, check mode, banner output |
 | Theme | `test_theme.py` | Color constants, button factory, scrolled-text widget |
 
 ---
