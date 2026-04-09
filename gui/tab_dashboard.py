@@ -32,6 +32,7 @@ from gui.theme import (
     make_button,
     make_scrolled_text,
 )
+from gui.tooltip import Tooltip
 from scanner import scan_dns_cache, scan_firewall_logs
 
 
@@ -58,10 +59,21 @@ class DashboardTab:
         btn_frame = tk.Frame(t, bg=BG)
         btn_frame.pack(fill=tk.X, padx=15, pady=(0, 8))
 
-        make_button(btn_frame, "  Update Feeds", self._run_update_feeds, ACCENT2).pack(side=tk.LEFT, padx=4)
-        make_button(btn_frame, "  Scan Firewall Log", self._run_firewall_scan, ACCENT).pack(side=tk.LEFT, padx=4)
-        make_button(btn_frame, "  Scan DNS Cache", self._run_dns_scan, ACCENT).pack(side=tk.LEFT, padx=4)
-        make_button(btn_frame, "  Refresh", self.refresh, "#444").pack(side=tk.LEFT, padx=4)
+        btn_update = make_button(btn_frame, "  Update Feeds", self._run_update_feeds, ACCENT2)
+        btn_update.pack(side=tk.LEFT, padx=4)
+        Tooltip(btn_update, "Download latest threat intelligence from all 8 feeds")
+
+        btn_fw = make_button(btn_frame, "  Scan Firewall Log", self._run_firewall_scan, ACCENT)
+        btn_fw.pack(side=tk.LEFT, padx=4)
+        Tooltip(btn_fw, "Check Windows Firewall log for malicious IP connections")
+
+        btn_dns = make_button(btn_frame, "  Scan DNS Cache", self._run_dns_scan, ACCENT)
+        btn_dns.pack(side=tk.LEFT, padx=4)
+        Tooltip(btn_dns, "Check DNS resolver cache for malicious domain lookups")
+
+        btn_refresh = make_button(btn_frame, "  Refresh", self.refresh, "#444")
+        btn_refresh.pack(side=tk.LEFT, padx=4)
+        Tooltip(btn_refresh, "Refresh dashboard statistics from database")
 
         # --- Feed health warning (hidden until a feed fails) ---
         self._health_var = tk.StringVar(value="")
