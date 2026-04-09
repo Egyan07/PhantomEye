@@ -137,7 +137,7 @@ Store your password as a Windows environment variable — **never hardcode it**:
 
 ## Running Tests
 
-PhantomEye ships with 86 unit tests covering utils, feeds, lookup, and alerts.
+PhantomEye ships with 120+ unit tests covering utils, feeds, lookup, alerts, database, and all three scanners.
 
 ```
 pip install pytest
@@ -172,7 +172,9 @@ PhantomEye/
 │   ├── test_utils.py
 │   ├── test_feeds.py
 │   ├── test_lookup.py
-│   └── test_alerts.py
+│   ├── test_alerts.py
+│   ├── test_database.py
+│   └── test_scanner.py
 ├── Install_PhantomEye.bat
 └── Uninstall_PhantomEye.bat
 ```
