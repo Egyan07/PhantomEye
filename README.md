@@ -16,16 +16,16 @@
 </p>
 
 <p align="center">
-  Author: <a href="https://github.com/Egyan07">Egyan07</a> 
+  Author: <a href="https://github.com/Egyan07">Egyan07</a>
 </p>
 
-> **Windows Only** — PhantomEye reads Windows Firewall logs, the Windows DNS resolver cache, and registers Windows Scheduled Tasks. It requires Windows 10 or later.
+> **Windows only.** PhantomEye reads Windows Firewall logs, the Windows DNS resolver cache, and registers Windows Scheduled Tasks. It requires Windows 10 or later.
 
 ---
 
 ## What Is PhantomEye?
 
-PhantomEye is a free, zero-dependency threat intelligence platform for Windows. It automatically downloads indicators of compromise (IOCs) from 8 public threat feeds, then scans your firewall logs, DNS cache, and email headers against 40,000+ known-bad IPs and domains. When a match is found it logs a timestamped alert, displays it in the GUI dashboard, and optionally sends an email notification — giving small businesses and home labs automated threat monitoring without paid subscriptions, cloud accounts, or third-party agents.
+PhantomEye is a free, zero-dependency threat intelligence platform for Windows. It automatically downloads indicators of compromise (IOCs) from 8 public threat feeds, then scans your firewall logs, DNS cache, and email headers against 40,000+ known-bad IPs and domains. When a match is found it logs a timestamped alert, displays it in the GUI dashboard, and optionally sends an email notification. That gives small businesses and home labs automated threat monitoring without paid subscriptions, cloud accounts, or third-party agents.
 
 ---
 
@@ -79,13 +79,13 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 |---|---|
 | Firewall Log Scanner | Checks Windows Firewall log for outbound and inbound connections to known malicious IPs |
 | DNS Cache Scanner | Reads the Windows DNS resolver cache and flags domains matching threat feeds |
-| Email Header Analyzer | Paste raw Outlook headers — extracts and checks all relay IPs and sender domains |
-| IP / Domain Lookup | Instant verdict from 40,000+ IOCs — paste any IP, domain, or full URL |
-| Multi-feed matching | Each IOC is checked against all 8 feeds; results show which feed flagged it |
+| Email Header Analyzer | Paste raw Outlook headers and it extracts and checks every relay IP and sender domain |
+| IP / Domain Lookup | Instant verdict from 40,000+ IOCs. Paste any IP, domain, or full URL |
+| Multi-feed matching | Each IOC is checked against all 8 feeds and the result names the feed that flagged it |
 | Connection Monitor | Real-time netstat polling checks active TCP connections against threat feeds |
 | IP Geolocation | Lookup results show country, city, ISP, and AS number for malicious IPs |
-| Custom feeds | Add your own threat feed URLs — same parsing pipeline as built-in feeds |
-| Bulk lookup | Paste multiple IPs/domains — check all at once against threat feeds |
+| Custom feeds | Add your own threat feed URLs. They go through the same parsing pipeline as the built-in feeds |
+| Bulk lookup | Paste multiple IPs or domains and check them all against the threat feeds at once |
 
 ### Monitoring
 
@@ -114,7 +114,7 @@ PhantomEye is a free, zero-dependency threat intelligence platform for Windows. 
 | Tooltips | Hover tooltips on every action button |
 | CodeQL SAST | Automated security scanning on every push |
 | Security tests | 18 input validation tests covering path traversal, injection, and oversized input |
-| Clean architecture | 23 focused modules — no 1,000-line files |
+| Clean architecture | 23 focused modules, no 1,000-line files |
 
 ---
 
@@ -137,7 +137,7 @@ All feeds are free and require no account or API key.
 
 ## Quick Start
 
-### Option A — Installer (recommended)
+### Option A: installer (recommended)
 
 1. Download or clone the repository
 2. Open `config.py` and set `ADMIN_PC` to your machine name
@@ -145,18 +145,18 @@ All feeds are free and require no account or API key.
 4. PhantomEye launches automatically and feeds are downloaded
 
 The installer creates two Windows Scheduled Tasks:
-- **Feed update** — every 6 hours
-- **Morning scan** — daily at 6:00 AM
+- **Feed update**: every 6 hours
+- **Morning scan**: daily at 6:00 AM
 
 Both run as your user account, not SYSTEM.
 
-### Option B — Manual
+### Option B: manual
 
 ```bash
 git clone https://github.com/Egyan07/PhantomEye.git
 cd PhantomEye
 
-# Edit config.py — set ADMIN_PC to your machine name
+# Edit config.py and set ADMIN_PC to your machine name
 
 # Update feeds
 python main.py --update-feeds
@@ -253,7 +253,7 @@ Edit `config.py` to customise PhantomEye for your environment.
 
 | Setting | Default | Description |
 |---|---|---|
-| `ADMIN_PC` | `""` | Your machine name — required for scheduled tasks |
+| `ADMIN_PC` | `""` | Your machine name, required for the scheduled tasks |
 | `EMAIL_ENABLED` | `False` | Enable SMTP email alerts |
 | `SMTP_SERVER` | `"smtp.gmail.com"` | SMTP server address |
 | `SMTP_PORT` | `587` | SMTP port (TLS) |
@@ -263,7 +263,7 @@ Edit `config.py` to customise PhantomEye for your environment.
 
 ### Email password
 
-Store your SMTP password as a Windows environment variable — **never hardcode it**:
+Store your SMTP password as a Windows environment variable. Never hardcode it:
 
 ```powershell
 # Run PowerShell as Administrator
@@ -277,13 +277,13 @@ Store your SMTP password as a Windows environment variable — **never hardcode 
 
 | Area | Measure |
 |---|---|
-| Network | All feed downloads use HTTPS; no data leaves the machine except optional email alerts |
-| Email | SMTP uses TLS with `ssl.create_default_context()` — server certificate is verified |
-| Credentials | Email password read from environment variable at runtime; never stored in config or database |
-| Database | Local SQLite only; no remote connections; no user data is uploaded |
-| Input validation | IPs validated via `ipaddress` stdlib; domains sanitised before lookup; URLs auto-stripped |
-| Alert integrity | 24-hour deduplication prevents alert flooding; history capped at configurable limit |
-| Resource safety | All database connections wrapped in `try/finally`; SMTP calls use explicit timeout (30 s) |
+| Network | All feed downloads use HTTPS, and no data leaves the machine except optional email alerts |
+| Email | SMTP uses TLS with `ssl.create_default_context()`, so the server certificate is verified |
+| Credentials | Email password read from the environment at runtime, never stored in config or database |
+| Database | Local SQLite only, no remote connections, no user data uploaded |
+| Input validation | IPs validated with the `ipaddress` stdlib, domains sanitised before lookup, URLs stripped automatically |
+| Alert integrity | 24-hour deduplication prevents alert flooding, history capped at a configurable limit |
+| Resource safety | All database connections wrapped in `try/finally`, SMTP calls use an explicit 30 second timeout |
 | SAST scanning | CodeQL analysis on every push/PR and weekly schedule |
 
 For vulnerability reporting, see [SECURITY.md](SECURITY.md).
@@ -308,12 +308,12 @@ For the firewall scanner to detect threats, Windows must be configured to log co
 
 | Limitation | Detail |
 |---|---|
-| Windows only | Reads Windows Firewall logs and DNS cache; does not run on Linux or macOS |
-| Known-bad detection only | Matches against public threat feeds; does not detect zero-day or novel attacks |
-| Feed lag | Public feeds typically lag 24–72 hours behind live threats |
-| No real-time blocking | Detects and alerts; does not drop packets or kill processes |
-| Single machine | Scans the local machine only; no multi-host or network-wide deployment |
-| No auto-update | Feed URLs are hardcoded; new feeds require a code change |
+| Windows only | Reads Windows Firewall logs and the DNS cache, does not run on Linux or macOS |
+| Known-bad detection only | Matches against public threat feeds, does not detect zero-day or novel attacks |
+| Feed lag | Public feeds typically lag 24 to 72 hours behind live threats |
+| No real-time blocking | Detects and alerts, does not drop packets or kill processes |
+| Single machine | Scans the local machine only, no multi-host or network-wide deployment |
+| No auto-update | Feed URLs are hardcoded, new feeds require a code change |
 
 ---
 
@@ -322,9 +322,9 @@ For the firewall scanner to detect threats, Windows must be configured to log co
 | Symptom | Fix |
 |---|---|
 | "No feeds loaded" on first launch | Run `python main.py --update-feeds` or wait for the scheduled task |
-| Firewall scan finds nothing | Enable firewall logging — see [Enabling Windows Firewall Logging](#enabling-windows-firewall-logging) |
+| Firewall scan finds nothing | Enable firewall logging, see [Enabling Windows Firewall Logging](#enabling-windows-firewall-logging) |
 | Email alerts not sending | Verify `EMAIL_ENABLED = True` in `config.py` and that the environment variable `PHANTOMEYE_EMAIL_PASSWORD` is set |
-| `--check` reports stale feeds | Feeds older than 24 hours are flagged; run `--update-feeds` to refresh |
+| `--check` reports stale feeds | Feeds older than 24 hours are flagged. Run `--update-feeds` to refresh |
 | GUI does not launch | Ensure you are running Python 3.10+ with tkinter (included in the standard Windows installer) |
 | Permission errors on install | Right-click `Install_PhantomEye.bat` → **Run as administrator** |
 
@@ -366,14 +366,14 @@ pytest tests/ -v
 
 ## Disclaimer
 
-PhantomEye is a **known-bad detector** — it matches your network activity against public threat intelligence feeds that typically lag 24–72 hours behind novel attacks. It is not a replacement for a full EDR, SIEM, or managed security service. It is designed to raise the security floor for small businesses and home labs that currently have no automated threat monitoring.
+PhantomEye is a **known-bad detector**. It matches your network activity against public threat intelligence feeds that typically lag 24 to 72 hours behind novel attacks. It is not a replacement for a full EDR, SIEM, or managed security service. It is designed to raise the security floor for small businesses and home labs that currently have no automated threat monitoring.
 
 ---
 
 ## License
 
-[MIT License](LICENSE) — free to use, modify, and distribute.
+[MIT License](LICENSE), free to use, modify and distribute.
 
 ---
 
-<p align="center"><em>PhantomEye — See the threats they can't.</em></p>
+<p align="center"><em>PhantomEye. See the threats they can't.</em></p>
