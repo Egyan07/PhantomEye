@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  Author: <a href="https://github.com/Egyan07">Egyan07</a> · Red Parrot Accounting Ltd
+  Author: <a href="https://github.com/Egyan07">Egyan07</a> 
 </p>
 
 > **Windows Only** — PhantomEye reads Windows Firewall logs, the Windows DNS resolver cache, and registers Windows Scheduled Tasks. It requires Windows 10 or later.
